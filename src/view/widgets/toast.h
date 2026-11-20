@@ -7,6 +7,7 @@
 #pragma once
 
 #include "base_widget.h"
+#include "base_model.h"
 
 #include <cstdint>
 #include <string>
@@ -83,6 +84,38 @@ private:
     lv_obj_t* label_{nullptr};
     const lv_font_t* font_{nullptr};
     lv_timer_t* hide_timer_{nullptr};
+};
+
+class VolumeOverlay : public BaseWidgets {
+public:
+    VolumeOverlay(lv_obj_t* parent, app::AssetManager& assets);
+    ~VolumeOverlay() override;
+
+    void build() override;
+    void show(int percent, bool muted);
+
+private:
+    static void hide_timer_cb(lv_timer_t* timer);
+
+    app::AssetManager& assets_;
+    lv_obj_t* icon_{nullptr};
+    lv_obj_t* title_{nullptr};
+    lv_obj_t* percent_{nullptr};
+    lv_obj_t* bar_{nullptr};
+    lv_timer_t* hide_timer_{nullptr};
+};
+
+class RadioDiscoveryNotice {
+public:
+    RadioDiscoveryNotice(lv_obj_t* parent, viewmodel::BaseViewModel& view_model, app::AssetManager& assets);
+    void build();
+    void update(model::RadioDiscoveryState state);
+    bool visible() const;
+    lv_obj_t* root() const;
+
+private:
+    Toast toast_;
+    model::RadioDiscoveryState state_{model::RadioDiscoveryState::Searching};
 };
 
 } // namespace view::widgets

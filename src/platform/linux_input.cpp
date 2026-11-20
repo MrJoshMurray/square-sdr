@@ -191,10 +191,28 @@ uint32_t map_evdev_key(uint16_t code) {
             return LV_KEY_LEFT;
         case KEY_RIGHT:
             return LV_KEY_RIGHT;
+        case KEY_MUTE:
+            return kKeyMute;
+        case KEY_VOLUMEDOWN:
+            return kKeyVolumeDown;
+        case KEY_VOLUMEUP:
+            return kKeyVolumeUp;
+        case KEY_U:
+            return 'u';
+        case KEY_I:
+            return 'i';
         case KEY_Z:
             return 'z';
         case KEY_C:
             return 'c';
+        case KEY_B:
+            return 'b';
+        case KEY_M:
+            return 'm';
+        case KEY_W:
+            return 'w';
+        case KEY_S:
+            return 's';
         case KEY_4:
             return '4';
         case KEY_5:
@@ -225,8 +243,11 @@ bool has_nav_keys(int fd) {
         return (key_bits[code / bits_per_word] & (1UL << (code % bits_per_word))) != 0;
     };
 
-    return has_key(KEY_ESC) || has_key(KEY_LEFT) || has_key(KEY_RIGHT) || has_key(KEY_Z) ||
-           has_key(KEY_C) || has_key(KEY_4) || has_key(KEY_5) || has_key(KEY_6) ||
+        return has_key(KEY_ESC) || has_key(KEY_LEFT) || has_key(KEY_RIGHT) || has_key(KEY_Z) ||
+            has_key(KEY_C) || has_key(KEY_B) ||
+               has_key(KEY_M) || has_key(KEY_W) || has_key(KEY_S) || has_key(KEY_4) ||
+               has_key(KEY_5) || has_key(KEY_6) || has_key(KEY_MUTE) ||
+               has_key(KEY_VOLUMEDOWN) || has_key(KEY_VOLUMEUP) || has_key(KEY_U) || has_key(KEY_I) ||
            has_key(KEY_7) || has_key(KEY_8) || has_key(KEY_SYSRQ) || has_key(KEY_HELP);
 }
 
@@ -423,6 +444,12 @@ const char* describe_key(uint32_t key) {
             return "PrintScreen";
         case kKeyHelp:
             return "Help";
+        case kKeyMute:
+            return "Mute";
+        case kKeyVolumeDown:
+            return "VolumeDown";
+        case kKeyVolumeUp:
+            return "VolumeUp";
         default:
             break;
     }

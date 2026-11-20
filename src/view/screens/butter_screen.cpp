@@ -8,7 +8,6 @@
 
 #include "asset_manager.h"
 #include "bindings.h"
-
 namespace screen {
 
 ButterScreen::ButterScreen(viewmodel::BaseViewModel& view_model, app::AssetManager& assets)
@@ -17,12 +16,14 @@ ButterScreen::ButterScreen(viewmodel::BaseViewModel& view_model, app::AssetManag
 }
 
 void ButterScreen::build_content(lv_obj_t* content) {
-    auto* page_label = lv_label_create(content);
-    lv_label_bind_text(page_label, view_model().counter_subject(), "Counter: %d");
-    auto* standard_font = assets().load_standard_font(20);
-    lv_obj_set_style_text_font(page_label, standard_font ? standard_font : &lv_font_montserrat_20, 0);
-    lv_obj_center(page_label);
-    reactive::bind_theme(page_label, view_model().dark_mode_subject(), reactive::ThemeRole::Text);
+    auto* message = lv_label_create(content);
+    lv_label_set_text(message, "This page is intentionally blank");
+    auto* font = assets().load_standard_font(16, app::StandardFontWeight::Regular);
+    lv_obj_set_style_text_font(message, font ? font : &lv_font_montserrat_14, 0);
+    lv_obj_set_width(message, 288);
+    lv_obj_set_style_text_align(message, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_center(message);
+    reactive::bind_theme(message, view_model().dark_mode_subject(), reactive::ThemeRole::Text);
 }
 
 } // namespace screen

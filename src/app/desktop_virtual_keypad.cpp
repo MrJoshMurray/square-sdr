@@ -184,11 +184,11 @@ uint32_t fn_key_for(char key) {
         case 'p':
             return SDLK_F12;
         case 'a':
-            return SDLK_MUTE;
+            return platform::kKeyMute;
         case 's':
-            return SDLK_VOLUMEDOWN;
+            return platform::kKeyVolumeDown;
         case 'd':
-            return SDLK_VOLUMEUP;
+            return platform::kKeyVolumeUp;
         case 'f':
             return LV_KEY_UP;
         case 'h':
@@ -274,11 +274,11 @@ std::string output_key_name(uint32_t key) {
             return "media-previous";
         case SDLK_AUDIONEXT:
             return "media-next";
-        case SDLK_MUTE:
+        case platform::kKeyMute:
             return "mute";
-        case SDLK_VOLUMEDOWN:
+        case platform::kKeyVolumeDown:
             return "volume-down";
-        case SDLK_VOLUMEUP:
+        case platform::kKeyVolumeUp:
             return "volume-up";
         case SDLK_BRIGHTNESSDOWN:
             return "brightness-down";
@@ -376,6 +376,15 @@ bool DesktopVirtualKeypad::handle_pointer(int32_t x, int32_t y, bool pressed) {
         pressed_key_ = hit;
         if (hit == kEscapeKeyIndex) {
             emit_key_state(LV_KEY_ESC, true);
+        }
+        else if (hit >= 0 && static_cast<size_t>(hit) < kMatrixKeyCount
+                 && kKeys[static_cast<size_t>(hit)].kind == KeyKind::Character
+                 && (kKeys[static_cast<size_t>(hit)].base == 'z'
+                     || kKeys[static_cast<size_t>(hit)].base == 'c')
+                 && mode_ == Mode::Base
+                 && !fn_active_ && !ctrl_active_ && !alt_active_) {
+            held_pointer_key_ = kKeys[static_cast<size_t>(hit)].base;
+            emit_key_state(held_pointer_key_, true);
         }
         else if (hit >= 0 && static_cast<size_t>(hit) < kMatrixKeyCount &&
                  kKeys[static_cast<size_t>(hit)].kind == KeyKind::Character &&

@@ -20,17 +20,16 @@ struct IconSpec {
     lv_event_cb_t click_cb;
 };
 
-constexpr std::array<int32_t, 5> kNavButtonXOffsets = {30, 17, 2, -15, -30};
+constexpr std::array<int32_t, 5> kNavButtonXOffsets = {20, 12, 2, -10, -20};
 
 struct ShortcutSpec {
     const char* key;
     const char* action;
 };
 
-constexpr std::array<ShortcutSpec, 3> kButterShortcuts = {{
-    {"ESC", "Back"},
-    {"Z/Left", "Less"},
-    {"C/Right", "More"},
+constexpr std::array<ShortcutSpec, 2> kButterShortcuts = {{
+    {"Z/Left", "Prev"},
+    {"C/Right", "Next"},
 }};
 
 } // namespace
@@ -121,12 +120,12 @@ void NavBar::create_shortcut_hints() {
 void NavBar::create_icon_buttons() {
     const auto light_color = view::palette(false).text;
     const auto dark_color = view::palette(true).text;
-    icon_font_ = assets_.load_font("Phosphor-Fill.ttf", 22);
+    icon_font_ = assets_.load_standard_font(10, app::StandardFontWeight::Regular);
 
     for (size_t i = 0; i < icon_buttons_.size(); ++i) {
         icon_buttons_[i] = std::make_unique<IconButton>(core_obj_,
                                                         view_model_,
-                                                        32,
+                                52,
                                                         24,
                                                         "",
                                                         icon_font_ ? icon_font_ : &lv_font_montserrat_14,
@@ -144,23 +143,24 @@ void NavBar::create_icon_buttons() {
 void NavBar::update_icon_buttons() {
     const bool is_butter_page = view_model_.current_page() == model::AppPage::Butter;
     const bool is_dark_mode = view_model_.is_dark_mode();
+    if (is_butter_page) lv_obj_add_flag(core_obj_, LV_OBJ_FLAG_HIDDEN);
+    else lv_obj_remove_flag(core_obj_, LV_OBJ_FLAG_HIDDEN);
     const auto colors = view::palette(is_dark_mode);
-    const char* theme_icon = is_dark_mode ? ICON_SUN : ICON_MOON;
     /* nav bar icons showed on apple screen */
     const std::array<IconSpec, 5> apple_icons = {{
-        {ICON_SIGN_OUT, request_quit_cb},
-        {ICON_TEXT_BOLD, toggle_bold_text_cb},
-        {theme_icon, toggle_theme_cb},
-        {ICON_INFO, show_info_cb},
-        {ICON_SQUARE_ARROW_RIGHT, toggle_page_cb},
+        {"Band", cycle_band_cb},
+        {"Mode", select_next_mode_cb},
+        {"BW", cycle_bandwidth_cb},
+        {"Step", cycle_step_cb},
+        {"Setup", toggle_page_cb},
     }};
     /* Hidden action targets for the shortcut keys shown on the butter screen. */
     const std::array<IconSpec, 5> butter_icons = {{
         {"", nullptr},
-        {"", decrement_counter_cb},
+        {"", select_previous_mode_cb},
         {"", nullptr},
-        {"", increment_counter_cb},
-        {"", toggle_page_cb},
+        {"", select_next_mode_cb},
+        {"Back", toggle_page_cb},
     }};
 
     platform::set_nav_shortcut_mode(is_butter_page);
@@ -170,15 +170,14 @@ void NavBar::update_icon_buttons() {
         }
     }
     if (shortcut_bar_) {
-        if (is_butter_page) {
-            lv_obj_remove_flag(shortcut_bar_, LV_OBJ_FLAG_HIDDEN);
-        }
-        else {
-            lv_obj_add_flag(shortcut_bar_, LV_OBJ_FLAG_HIDDEN);
-        }
+        lv_obj_add_flag(shortcut_bar_, LV_OBJ_FLAG_HIDDEN);
     }
 
     const auto& icons = is_butter_page ? butter_icons : apple_icons;
+    lv_obj_set_flex_align(core_obj_,
+                          is_butter_page ? LV_FLEX_ALIGN_END : LV_FLEX_ALIGN_SPACE_BETWEEN,
+                          LV_FLEX_ALIGN_CENTER,
+                          LV_FLEX_ALIGN_CENTER);
     for (size_t i = 0; i < icon_buttons_.size(); ++i) {
         auto& button = icon_buttons_[i];
         if (!button) {
@@ -187,7 +186,8 @@ void NavBar::update_icon_buttons() {
 
         button->set_text(icons[i].text);
         if (button->root()) {
-            if (is_butter_page) {
+            lv_obj_set_style_translate_x(button->root(), is_butter_page ? 0 : kNavButtonXOffsets[i], 0);
+            if (is_butter_page && i != 4) {
                 lv_obj_add_flag(button->root(), LV_OBJ_FLAG_HIDDEN);
             }
             else {
@@ -195,11 +195,10 @@ void NavBar::update_icon_buttons() {
             }
             lv_obj_remove_event_cb(button->root(), toggle_theme_cb);
             lv_obj_remove_event_cb(button->root(), toggle_page_cb);
-            lv_obj_remove_event_cb(button->root(), toggle_bold_text_cb);
-            lv_obj_remove_event_cb(button->root(), increment_counter_cb);
-            lv_obj_remove_event_cb(button->root(), decrement_counter_cb);
-            lv_obj_remove_event_cb(button->root(), show_info_cb);
-            lv_obj_remove_event_cb(button->root(), request_quit_cb);
+            lv_obj_remove_event_cb(button->root(), cycle_band_cb);
+            lv_obj_remove_event_cb(button->root(), select_next_mode_cb);
+            lv_obj_remove_event_cb(button->root(), cycle_bandwidth_cb);
+            lv_obj_remove_event_cb(button->root(), cycle_step_cb);
             if (icons[i].click_cb) {
                 lv_obj_add_event_cb(button->root(), icons[i].click_cb, LV_EVENT_CLICKED, &view_model_);
                 button->set_enabled(true);
@@ -225,38 +224,38 @@ void NavBar::toggle_page_cb(lv_event_t* event) {
     }
 }
 
-void NavBar::toggle_bold_text_cb(lv_event_t* event) {
+void NavBar::select_next_mode_cb(lv_event_t* event) {
     auto* view_model = static_cast<viewmodel::BaseViewModel*>(lv_event_get_user_data(event));
     if (view_model) {
-        view_model->toggle_bold_text();
+        view_model->select_next_radio_mode();
     }
 }
 
-void NavBar::increment_counter_cb(lv_event_t* event) {
+void NavBar::select_previous_mode_cb(lv_event_t* event) {
     auto* view_model = static_cast<viewmodel::BaseViewModel*>(lv_event_get_user_data(event));
     if (view_model) {
-        view_model->increment_counter();
+        view_model->select_previous_radio_mode();
     }
 }
 
-void NavBar::decrement_counter_cb(lv_event_t* event) {
+void NavBar::cycle_band_cb(lv_event_t* event) {
     auto* view_model = static_cast<viewmodel::BaseViewModel*>(lv_event_get_user_data(event));
     if (view_model) {
-        view_model->decrement_counter();
+        view_model->cycle_band(1);
     }
 }
 
-void NavBar::show_info_cb(lv_event_t* event) {
+void NavBar::cycle_bandwidth_cb(lv_event_t* event) {
     auto* view_model = static_cast<viewmodel::BaseViewModel*>(lv_event_get_user_data(event));
     if (view_model) {
-        view_model->toggle_info();
+        view_model->cycle_filter_bandwidth(1);
     }
 }
 
-void NavBar::request_quit_cb(lv_event_t* event) {
+void NavBar::cycle_step_cb(lv_event_t* event) {
     auto* view_model = static_cast<viewmodel::BaseViewModel*>(lv_event_get_user_data(event));
     if (view_model) {
-        view_model->request_quit();
+        view_model->cycle_tuning_step(1);
     }
 }
 

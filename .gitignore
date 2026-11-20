@@ -62,6 +62,7 @@
 /bin/
 /lib/
 /dist/
+/_CPack_Packages/
 
 # =========================
 # CMake

@@ -5,7 +5,7 @@ WORKFLOW_PRESET="${WORKFLOW_PRESET:-cp0-cross-package}"
 REMOTE_USER="${REMOTE_USER:-}"
 REMOTE_HOST="${REMOTE_HOST:-}"
 REMOTE_DIR="${REMOTE_DIR:-/home/${REMOTE_USER}}"
-PACKAGE_GLOB="${PACKAGE_GLOB:-dist/TemplateApp_*_arm64.deb}"
+PACKAGE_GLOB="${PACKAGE_GLOB:-dist/Square SDR_*_arm64.deb}"
 
 log() {
   printf '\n==> %s\n' "$*"
@@ -14,9 +14,10 @@ log() {
 log "Workflow: cmake --workflow --preset ${WORKFLOW_PRESET}"
 cmake --workflow --preset "${WORKFLOW_PRESET}"
 
-shopt -s nullglob
-packages=( ${PACKAGE_GLOB} )
-shopt -u nullglob
+packages=()
+while IFS= read -r package; do
+  packages+=("$package")
+done < <(compgen -G "${PACKAGE_GLOB}" || true)
 
 if (( ${#packages[@]} == 0 )); then
   printf 'No package matched: %s\n' "${PACKAGE_GLOB}" >&2

@@ -76,6 +76,13 @@ set(CMAKE_SYSROOT "${CM0_SDK_ROOT}" CACHE PATH "Sysroot used for CardputerZero c
 set(CMAKE_SYSROOT_COMPILE "${CMAKE_SYSROOT}" CACHE PATH "Compile sysroot used for CardputerZero cross builds" FORCE)
 set(CMAKE_SYSROOT_LINK "${CMAKE_SYSROOT}" CACHE PATH "Link sysroot used for CardputerZero cross builds" FORCE)
 
+# Some Debian cross compilers do not add the target multiarch include directory
+# when the sysroot is supplied explicitly. Make it available during CMake's
+# compiler ABI checks as well as normal target compilation.
+set(_CP0_MULTIARCH_INCLUDE_DIR "${CMAKE_SYSROOT}/usr/include/${CM0_MULTIARCH}")
+set(CMAKE_C_FLAGS_INIT "${CMAKE_C_FLAGS_INIT} -isystem\"${_CP0_MULTIARCH_INCLUDE_DIR}\"")
+set(CMAKE_CXX_FLAGS_INIT "${CMAKE_CXX_FLAGS_INIT} -isystem\"${_CP0_MULTIARCH_INCLUDE_DIR}\"")
+
 find_program(_CP0_C_COMPILER NAMES aarch64-linux-gnu-gcc REQUIRED)
 find_program(_CP0_CXX_COMPILER NAMES aarch64-linux-gnu-g++ REQUIRED)
 set(CMAKE_C_COMPILER "${_CP0_C_COMPILER}" CACHE FILEPATH "aarch64 Linux C compiler" FORCE)
@@ -109,7 +116,7 @@ if(_CP0_GCC_RUNTIME_DIRS)
     list(GET _CP0_GCC_RUNTIME_DIRS 0 CP0_GCC_RUNTIME_DIR)
     set(CP0_GCC_RUNTIME_DIR "${CP0_GCC_RUNTIME_DIR}" CACHE PATH "GCC runtime directory inside CM0 sysroot")
     set(_CP0_SYSROOT_LINK_FLAGS
-        "-B${_CP0_MULTIARCH_LIB_DIR}/ -B${CP0_GCC_RUNTIME_DIR}/ -Wl,-rpath-link,${_CP0_MULTIARCH_LIB_DIR} -L${_CP0_MULTIARCH_LIB_DIR}"
+        "-B\"${_CP0_MULTIARCH_LIB_DIR}/\" -B\"${CP0_GCC_RUNTIME_DIR}/\" -Wl,-rpath-link,\"${_CP0_MULTIARCH_LIB_DIR}\" -L\"${_CP0_MULTIARCH_LIB_DIR}\""
     )
     set(CMAKE_EXE_LINKER_FLAGS_INIT "${CMAKE_EXE_LINKER_FLAGS_INIT} ${_CP0_SYSROOT_LINK_FLAGS}")
     set(CMAKE_SHARED_LINKER_FLAGS_INIT "${CMAKE_SHARED_LINKER_FLAGS_INIT} ${_CP0_SYSROOT_LINK_FLAGS}")

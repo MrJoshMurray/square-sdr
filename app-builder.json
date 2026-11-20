@@ -1,27 +1,43 @@
 {
-  "app_name": "Template",
-  "package_name": "template_app",
+  "app_name": "Square SDR",
+  "package_name": "square-sdr",
   "version": "0.2.1",
-  "description": "Template Application for CardputerZero",
+  "description": "Receive-only OpenHPSDR client for Square SDR 2 on Cardputer Zero.",
 
   "store": {
-    "summary": "TODO: one line about your app (placeholders are auto-rejected)",
-    "description": "TODO: a longer description for the store detail page. Every TODO field in this store section must be replaced before publishing — the store validator rejects unedited template metadata.",
-    "categories": ["TODO: pick 1-2 real categories from docs/APP_BUILDER_JSON.md"],
+    "summary": "Receive-only SDR control and spectrum display for Square SDR 2.",
+    "description": "Tune and monitor a Square SDR 2 over Ethernet from Cardputer Zero. The app provides live IQ reception, USB/LSB/AM/CW demodulation, a panadapter and waterfall, receive audio, approximate signal and PA telemetry, and discovery status. Transmit, PTT, MOX, and microphone capture are disabled.",
+    "locales": {
+      "ja": {
+        "summary": "Square SDR 2 用の受信専用 SDR 操作・スペクトラム表示アプリ。",
+        "description": "Cardputer Zero から Ethernet 経由で Square SDR 2 を操作・監視します。ライブ IQ 受信、USB/LSB/AM/CW 復調、パナアダプターとウォーターフォール、受信音声、信号レベルと PA テレメトリー、無線機検出状態に対応します。送信、PTT、MOX、マイク入力は無効です。"
+      },
+      "zh-CN": {
+        "summary": "用于 Square SDR 2 的只接收 SDR 控制与频谱显示。",
+        "description": "通过以太网在 Cardputer Zero 上调谐和监控 Square SDR 2。支持实时 IQ 接收、USB/LSB/AM/CW 解调、频谱图和瀑布图、接收音频、信号与 PA 遥测以及无线电发现状态。发射、PTT、MOX 和麦克风采集均已禁用。"
+      },
+      "es": {
+        "summary": "Control SDR de solo recepción y espectro para Square SDR 2.",
+        "description": "Sintoniza y supervisa un Square SDR 2 por Ethernet desde Cardputer Zero. Incluye recepción IQ en directo, demodulación USB/LSB/AM/CW, panadapter y cascada, audio de recepción, telemetría aproximada de señal y PA, y estado de descubrimiento. La transmisión, PTT, MOX y la captura de micrófono están desactivados."
+      }
+    },
+    "categories": ["Utility"],
     "screenshots": [
-      "screenshot/app-simulator-dark-darwin.png",
-      "screenshot/app-simulator-light-darwin.png"
+      "screenshot/square-sdr-receiver.png",
+      "screenshot/square-sdr-settings.png",
+      "screenshot/square-sdr-receiver-light.png",
+      "screenshot/square-sdr-settings-light.png"
     ],
-    "icon": "assets/images/template.png",
-    "license": "TODO: an SPDX id, e.g. MIT",
-    "source_repo": "https://github.com/CardputerZero/Template",
-    "author": { "github": "TODO-your-github-login", "display_name": "TODO: Your Name" },
-    "share_code": "TODO",
+    "icon": "assets/images/square-sdr.png",
+    "license": "MIT",
+    "source_repo": "https://github.com/MrJoshMurray/square-sdr",
+    "author": { "github": "MrJoshMurray", "display_name": "Josh Murray" },
+    "share_code": "SQSD",
     "permissions": {
       "camera": false,
       "microphone": false,
       "imu": false,
-      "network": false,
+      "network": true,
       "additional_hardware": false,
       "background_service": false,
       "external_display": false

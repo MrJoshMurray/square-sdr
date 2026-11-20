@@ -1,34 +1,69 @@
+# Square SDR
+
+This project is a receive-only Cardputer Zero application for the Square SDR 2.
+It uses OpenHPSDR Protocol 1 over Ethernet for live IQ reception, with USB, LSB,
+AM, and CW demodulation, mono-to-stereo audio output, a panadapter, and a
+top-to-bottom waterfall. Host-controlled TX, PTT, MOX, and microphone capture
+are deliberately disabled. A physical radio PTT may key the radio independently
+of this application.
+
+The desktop simulator supports deterministic offline spectrum testing and live
+radio testing. Device builds use ALSA for audio and are tuned for the Cardputer
+Zero's limited CPU and memory: the live analyzer caches window coefficients,
+minimizes time under the IQ-buffer lock, and the device preset compiles out
+trace/debug/info logging.
+
+If discovery receives no radio reply, a brief warning appears while discovery
+continues retrying. Network discovery errors show a separate warning.
+
+The live waterfall uses an uncalibrated display scale for low-level IQ; its
+colors are not calibrated signal-strength measurements. Receive audio uses
+automatic gain with a short startup fade and a 2% full-scale output limit.
+Keep the device volume low when starting a session and adjust it gradually.
+The receiver's approximate S reading uses pre-AGC in-band I/Q power and the
+HF convention of S9 = -73 dBm and 6 dB per S-unit. It assumes +20 dB receive
+gain and a nominal +3 dBm ADC full-scale reference, neither verified for this
+radio; it is not a calibrated S-meter. The receiver page shows PA temperature in
+degrees Celsius, PA current in amps, estimated power and SWR, and PTT/ADC-overload
+alerts. Temperature and current use the nominal Hermes-Lite reference voltage
+and have not been calibrated against instruments. Power and
+SWR use the Hermes-Lite Thetis reference conversion and are estimates, not
+measurements calibrated for this radio. SWR is unavailable below 2 W forward
+power or when detector readings are invalid; do not rely on it for protection.
+The nominal 5 W output rating is not a hard limit on the reported power.
+Measurements clear after one second without valid packets. Mode and bandwidth
+changes reconfigure the live receive DSP and restart its short audio fade. AM
+bandwidth is the total RF passband; CW bandwidth is centered on the tuned
+signal, with a 700 Hz beat note.
+
+For the Square SDR 2's N2ADR-style filters, live receive uses the Hermes-Lite
+Thetis N2ADR preset: 160 m, 80 m, 60/40 m, 30/20 m, 17/15 m, and 12/10 m
+share six filter groups. The AM-broadcast high-pass is enabled above 160 m.
+Switching between two bands in the same group does not change the low-pass relay.
+The radio's low-pass bank is described as transmit-path-only for this model, so
+relay movement alone does not establish that reception is filtered.
+
 <p align="center">
-  <picture>
-    <source
-      media="(prefers-color-scheme: dark)"
-      srcset="./screenshot/app-simulator-dark-darwin.png"
-    />
-    <source
-      media="(prefers-color-scheme: light)"
-      srcset="./screenshot/app-simulator-light-darwin.png"
-    />
   <img
-    src="./screenshot/app-simulator-light-darwin.png"
-    alt="CardputerZero Template running in the desktop simulator"
-    width="315"
+    src="./screenshot/square-sdr-receiver.png"
+    alt="Square SDR receiver screen"
+    width="640"
   />
-  </picture>
 </p>
 
 <div align="center">
-    <h1>CardputerZero Application Template</h1>
+    <h1>Square SDR</h1>
 </div>
 
 <div align="center">
-  <p>A simple starter template for building embedded Linux GUI applications with LVGL and CMake.</p>
+  <p>A compact receive-only OpenHPSDR client for Square SDR 2.</p>
 </div>
 
 <p align="center" style="margin: 20px 0; display: flex; justify-content: center; flex-wrap: wrap; gap: 12px;">
-  <img src="https://img.shields.io/badge/SDL3-173B73?style=flat-square&logo=sdl&logoColor=white" alt="SDL3" />
+  <img src="https://img.shields.io/badge/SDL2-173B73?style=flat-square&logo=sdl&logoColor=white" alt="SDL2" />
   <img src="https://img.shields.io/badge/CMake-064F8C?style=flat-square&logo=cmake&logoColor=white" alt="CMake" />
   <img src="https://img.shields.io/badge/LVGL-2A9FD6?style=flat-square&logo=lvgl&logoColor=white" alt="LVGL" />
-  <img src="https://img.shields.io/badge/Raspberry%20Pi-A22846?style=flat-square&logo=raspberrypi&logoColor=white" alt="Raspberry Pi" />
+  <img src="https://img.shields.io/badge/Cardputer%20Zero-111111?style=flat-square" alt="Cardputer Zero" />
 </p>
 
 <p align="center">
@@ -39,33 +74,34 @@
     />
   </a>
 </p>
-It is intended to be used as a clean development baseline: desktop builds use an SDL hardware-accelerated compositor for fast UI preview, while device builds use the Linux/LVGL platform drivers.
+
+Desktop builds use an SDL hardware-accelerated compositor for fast UI preview, while device builds use the Linux/LVGL platform drivers.
 
 ## Project Overview
 
 In this example project, we used small MVVM-style structure around LVGL:
 
 - **UI layer**: screens and widgets are implemented with LVGL objects. `BaseScreen` owns the page root, title bar, nav bar, and page content. Widgets derive from `BaseWidgets` and expose a `build()` entry point.
-- **Data model**: `BaseModel` stores application state such as current page and theme mode.
-- **View model**: `BaseViewModel` exposes model state as LVGL observer subjects and provides UI actions such as page switching, counter updates, theme toggle, and quit request.
+- **Data model**: `BaseModel` stores application state such as current page, theme mode, receive mode, frequency, band, step, and filter width.
+- **View model**: `BaseViewModel` exposes model state as LVGL observer subjects and provides UI actions such as page switching, tuning, and receiver setting changes.
 - **Reactive/data binding**: `src/reactive` wraps LVGL observer subjects and common bindings so labels, styles, flags, widget values, and events can be connected to application state.
 - **Data flow**: user input triggers widget callbacks, callbacks update `BaseViewModel`, view model publishes subjects, and bound UI objects refresh automatically through LVGL observers.
 - **Platform layer**: platform code owns Linux input integration and other hardware-facing services. The nav bar maps hardware/keyboard keys `4` to `8`, plus `ESC` for quit.
 
-Current demo UI:
+## Current UI
 
-- Page 1: Hello World, font weight toggle, LVGL version info, light/dark theme toggle, page navigation.
-- Page 2: Counter page, increment/decrement actions, simple page navigation.
+- Receiver page: live panadapter/waterfall, signal level, radio telemetry, frequency, band, mode, bandwidth, and tuning step. The panadapter marks the selected passband: USB/CW to the right, LSB to the left, and AM across both sides. `Left`/`Right` or `Z`/`C` tune; holding them repeats.
+- Band defaults follow common HF convention: `160m` through `40m` use LSB, `30m` uses CW, and `20m` and above use USB. Selecting a band also restores that mode's default bandwidth.
+- Setup page: intentionally blank until settings are implemented. `ESC` returns to the receiver.
 
 ## Repository Layout
 
 ```text
 .
 ├── assets/                 # Runtime assets used by the app
-│   ├── applications/       # Desktop/app launcher metadata
 │   ├── audio/              # Audio resources
 │   ├── fonts/              # TTF fonts loaded through FreeType
-│   └── images/             # Image resources
+│   └── images/             # Application and launcher images
 ├── screenshot/             # Simulator screenshots for supported desktop platforms
 ├── src/
 │   ├── app/                # Application lifecycle, asset loading, screen management
@@ -104,9 +140,9 @@ Common CMake cache options:
 | Option | Default | Description |
 | --- | --- | --- |
 | `USE_DESKTOP` | `ON` | Build SDL desktop simulator when `ON`; build embedded Linux target when `OFF`. |
-| `APP_NAME` | `template_app` | Application name used by installed asset lookup. |
+| `APP_NAME` | `square-sdr` | Application name used by installed asset lookup. |
 | `APP_ASSETS_ROOT` | empty | Optional runtime asset root. Expected layout includes `fonts/`, `images/`, etc. |
-| `APP_CONFIG_FILE` | platform default | Optional config path. Defaults to `config/template-app.conf` for desktop builds and `/etc/template-app.conf` for device builds. |
+| `APP_CONFIG_FILE` | platform default | Optional config path. Defaults to `config/square-sdr.conf` for desktop builds and `/etc/square-sdr.conf` for device builds. |
 | `APP_KEY_INPUT_DEVICE` | empty | Optional Linux evdev device path, e.g. `/dev/input/event0`. Empty means auto-scan `/dev/input/event*`. |
 | `APP_FRAMEBUFFER_DEVICE` | `/dev/fb0` | Linux framebuffer device used by embedded builds when `APP_USE_DRM=OFF`. |
 | `APP_USE_DRM` | `OFF` | Use LVGL's Linux DRM/KMS backend instead of fbdev for embedded builds. |
@@ -119,7 +155,7 @@ Asset lookup order:
 2. source-tree `assets/` for development
 3. `/usr/share/<APP_NAME>/` for installed deployments
 
-Theme startup behavior is configured in `config/template-app.conf`:
+Theme startup behavior is configured in `config/square-sdr.conf`:
 
 ```ini
 [application]
@@ -127,9 +163,9 @@ dark_mode=yes
 ```
 
 Set `dark_mode` to `yes` or `no`. The parser also accepts `true`/`false` and `1`/`0`.
-Installed device builds use `/etc/template-app.conf` as the system default. Changing the theme
-from the navigation bar (keyboard shortcut `6`) writes a per-user override to
-`$XDG_CONFIG_HOME/template-app/template-app.conf`, or `~/.config/template-app/template-app.conf`
+Installed device builds use `/etc/square-sdr.conf` as the system default. Changing the theme
+with `U` or `I` writes a per-user override to
+`$XDG_CONFIG_HOME/square-sdr/square-sdr.conf`, or `~/.config/square-sdr/square-sdr.conf`
 when `XDG_CONFIG_HOME` is not set. The per-user file takes precedence on the next launch.
 
 ## Desktop Builds
@@ -190,9 +226,9 @@ cmake --build --preset linux-x86-64-dbg
 Run:
 
 ```shell
-./build/linux-x86-64/Debug/template_app
+./build/linux-x86-64/Debug/square-sdr
 # or launch release build
-# ./build/linux-x86-64/Release/template_app
+# ./build/linux-x86-64/Release/square-sdr
 ```
 
 ### macOS Desktop
@@ -235,9 +271,9 @@ cmake --build --preset darwin-arm64-dbg
 Run:
 
 ```shell
-./build/darwin-arm64/Debug/template_app
+./build/darwin-arm64/Debug/square-sdr
 # or launch release build
-# ./build/darwin-arm64/Release/template_app
+# ./build/darwin-arm64/Release/square-sdr
 ```
 
 For Intel macOS, use the `darwin-x86-64` configure preset and matching build preset:
@@ -247,9 +283,9 @@ cmake --preset darwin-x86-64
 cmake --build --preset darwin-x86-64-dbg
 # alternatively, you can run release build
 # cmake --build --preset darwin-x86-64-rel
-./build/darwin-x86-64/Debug/template_app
+./build/darwin-x86-64/Debug/square-sdr
 # or launch release build
-# ./build/darwin-x86-64/Release/template_app
+# ./build/darwin-x86-64/Release/square-sdr
 ```
 
 ### Windows Desktop
@@ -315,11 +351,11 @@ Configure and build with MSVC:
 ```powershell
 cmake --preset win32-msvc
 cmake --build --preset win32-msvc-dbg
-.\build\msvc\Debug\template_app.exe
+.\build\msvc\Debug\square-sdr.exe
 
 # alternatively for release build
 # cmake --build --preset win32-msvc-rel
-# .\build\msvc\Release\template_app.exe
+# .\build\msvc\Release\square-sdr.exe
 ```
 
 Configure and build with MinGW-w64:
@@ -344,11 +380,11 @@ Configure and build with MinGW-w64:
 ```powershell
 cmake --preset win32-mingw64
 cmake --build --preset win32-mingw64-dbg
-.\build\mingw64\Debug\template_app.exe
+.\build\mingw64\Debug\square-sdr.exe
 
 # alternatively for release build
 # cmake --build --preset win32-mingw64-rel
-#.\build\mingw64\Release\template_app.exe
+#.\build\mingw64\Release\square-sdr.exe
 ```
 > [!NOTE]
 > `VCPKG` will handle the dependencies during CMake configuration process automatically, 
@@ -359,6 +395,9 @@ cmake --build --preset win32-mingw64-dbg
 This preset builds an aarch64 Linux target from a host machine with an `aarch64-linux-gnu-gcc/g++` toolchain.
 The BSP at `.cache/sdk_bsp-src` is treated as a sysroot: headers, libraries, startup objects, and pkg-config metadata are resolved from that directory first.
 If that directory does not exist on the first configure, the toolchain downloads and extracts `sdk_bsp.tar.gz` automatically before CMake runs compiler checks.
+The sysroot must include the target multiarch libc headers, `usr/include/alsa/asoundlib.h`, and
+`usr/lib/aarch64-linux-gnu/libasound.so.2.0.0` (or an equivalent ALSA library). Device audio uses
+ALSA; a sysroot containing only runtime libraries or only desktop headers is incomplete.
 
 Install a cross compile toolchain:
 
@@ -391,6 +430,16 @@ cmake --build --preset cp0-cross-dbg
 # cmake --build --preset cp0-cross-rel
 ```
 
+Create the local release package:
+
+```shell
+cmake --build --preset cp0-cross-rel --target package
+```
+
+The package is written to `dist/Square SDR_0.2.1_rev1_arm64.deb`. The `cp0-cross`
+preset sets `APP_LOG_LEVEL=APP_LOG_LEVEL_WARN` to avoid expensive debug logging
+on the device.
+
 Deploy the release package to your device after filling in your device user and IP:
 
 ```shell
@@ -402,32 +451,62 @@ By default, the debian package is copied to '$HOME' folder, normally it's under 
 On your device, install the copied package with `apt` and replace the package file name with the one you copied:
 
 ```shell
-sudo apt install --no-install-recommends ./TemplateApp_0.2.1_rev1_arm64.deb
+sudo apt install --no-install-recommends "./Square SDR_0.2.1_rev1_arm64.deb"
 ```
+
+### Hardware Test
+
+The Square SDR 2 and Cardputer Zero must be reachable on the same Ethernet
+network. Device builds use live mode by default, including launcher, service,
+and shell launches. Desktop builds use the offline simulator unless started
+with `SQUARE_SDR_LIVE_RADIO=1`.
+
+For a direct Mac-to-radio test, the known radio endpoint is commonly
+`169.254.19.221:1024`. The application also discovers Metis radios by sending
+Protocol 1 discovery packets across active IPv4 interfaces, so the address may
+change with the network setup.
+
+After installing the package on the Cardputer, launch Square SDR from the
+device launcher, or run `/usr/bin/square-sdr` from a shell. With a suitable
+antenna connected, confirm that audio is present and the waterfall updates.
+The current build is receive-only: do not
+expect transmit, PTT, MOX, microphone, or radio-side mode/bandwidth control.
+If the radio is not found, verify Ethernet link/addressing first and run the
+desktop simulator with `SQUARE_SDR_LIVE_RADIO=1` to separate network discovery
+from device display/audio issues.
 
 
 ## Development Guide
 
 ### Navigation Keys
 
-The first page bottom nav bar maps hardware/keyboard keys from left to right:
+The receiver bottom nav bar maps hardware/keyboard keys from left to right:
 
 | Key | Nav item |
 | --- | --- |
-| `4` | First icon button |
-| `5` | Second icon button |
-| `6` | Third icon button |
-| `7` | Fourth icon button |
-| `8` | Fifth icon button |
-| `ESC` | First icon button / quit |
+| `4` | Band |
+| `5` | Mode |
+| `6` | Bandwidth |
+| `7` | Tuning step |
+| `8` | Setup |
+| `ESC` | Back / quit |
 
-The counter page uses direct keyboard shortcuts:
+Receiver shortcuts:
 
 | Key | Action |
 | --- | --- |
-| `ESC` | Return to the first page |
-| `Left` | Decrease the counter |
-| `Right` | Increase the counter |
+| `Z` / `Left` | Tune down |
+| `C` / `Right` | Tune up |
+| `S` | Cycle tuning step |
+| `B` | Cycle band |
+| `M` | Cycle mode |
+| `W` | Cycle bandwidth |
+| `U` | Dark mode |
+| `I` | Light mode |
+| `Fn+A` | Toggle system mute |
+| `Fn+S` | Decrease system volume by 5% |
+| `Fn+D` | Increase system volume by 5% |
+| `ESC` | Quit from receiver; return from setup |
 
 ### Adding a Screen
 
@@ -478,20 +557,20 @@ Debian packages are produced with CPack and written to `dist/`. The package file
 Default example:
 
 ```text
-dist/TemplateApp_0.2.1_rev1_arm64.deb
+dist/Square SDR_0.2.1_rev1_arm64.deb
 ```
 
 Package layout:
 
 | Path | Content |
 | --- | --- |
-| `/usr/bin/template_app` | Application executable. |
-| `/etc/template-app.conf` | System-default application settings, including the startup theme. |
-| `/usr/share/template_app/` | Runtime assets: fonts, images, audio. |
-| `/usr/share/APPLaunch/applications/template_app.desktop` | APPLaunch launcher entry. |
-| `/usr/share/APPLaunch/share/images/template*.png` | APPLaunch launcher icons/fallbacks. |
-| `/usr/lib/systemd/system/template_app.service` | Optional systemd service for embedded autostart. |
-| `/usr/share/doc/template_app/` | README and third-party asset license notes. |
+| `/usr/bin/square-sdr` | Application executable. |
+| `/etc/square-sdr.conf` | System-default application settings, including the startup theme. |
+| `/usr/share/square-sdr/` | Runtime assets: fonts, images, audio. |
+| `/usr/share/APPLaunch/applications/square-sdr.desktop` | APPLaunch launcher entry. |
+| `/usr/share/APPLaunch/share/images/square-sdr*.png` | APPLaunch launcher icons/fallbacks. |
+| `/usr/lib/systemd/system/square-sdr.service` | Optional systemd service for embedded autostart. |
+| `/usr/share/doc/square-sdr/` | README and third-party asset license notes. |
 
 Build and package:
 

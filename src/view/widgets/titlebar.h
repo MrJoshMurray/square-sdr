@@ -25,12 +25,14 @@ public:
 private:
     void refresh_time();
     void refresh_device_status();
+    void refresh_radio_status();
     static void refresh_timer_cb(lv_timer_t* timer);
 
     viewmodel::BaseViewModel& view_model_;
     app::AssetManager& assets_;
     lv_obj_t* time_label_{nullptr};
     lv_obj_t* wifi_label_{nullptr};
+    lv_obj_t* radio_status_label_{nullptr};
     lv_obj_t* ethernet_label_{nullptr};
     lv_obj_t* battery_icon_label_{nullptr};
     lv_obj_t* battery_percent_label_{nullptr};

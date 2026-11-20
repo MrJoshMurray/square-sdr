@@ -6,7 +6,7 @@
 
 cmake_minimum_required(VERSION 3.31)
 
-project(template_app VERSION 0.2.1 LANGUAGES C CXX)
+project(square-sdr VERSION 0.2.1 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -20,22 +20,23 @@ set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
 set(USE_DESKTOP ON CACHE BOOL "Build the desktop emulator target with LVGL SDL support")
 set(APP_NAME "${PROJECT_NAME}" CACHE STRING "Application name used for installed asset lookup")
 set(APP_ASSETS_ROOT "" CACHE PATH "Optional runtime assets root. Expected subdirectories include fonts/")
-set(APP_CONFIG_FILE "" CACHE FILEPATH "Application config file; defaults to the repository file on desktop and /etc/template-app.conf on device")
+set(APP_CONFIG_FILE "" CACHE FILEPATH "Application config file; defaults to the repository file on desktop and /etc/square-sdr.conf on device")
 set(APP_KEY_INPUT_DEVICE "" CACHE STRING "Optional Linux evdev keyboard/keypad device path, e.g. /dev/input/event0")
 set(APP_FRAMEBUFFER_DEVICE "/dev/fb0" CACHE STRING "Linux framebuffer device path used by embedded builds")
 set(APP_DRM_DEVICE "/dev/dri/card0" CACHE STRING "Linux DRM device path used when APP_USE_DRM=ON")
 set(APP_DRM_CONNECTOR_ID "-1" CACHE STRING "DRM connector id used when APP_USE_DRM=ON; -1 auto-selects")
 set(APP_USE_DRM OFF CACHE BOOL "Enable LVGL Linux DRM/KMS backend for embedded Linux builds")
 set(CM0_ALLOW_FETCH_DEPS ON CACHE BOOL "Allow downloading missing CM0 BSP/dependencies during cross builds")
+set(APP_LOG_LEVEL "APP_LOG_LEVEL_TRACE" CACHE STRING "Compile-time application log level")
 # Export compile commands
 # Used for IDE IntelliSense
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE BOOL "Export compile_commands.json" FORCE)
 
 if(NOT APP_CONFIG_FILE)
     if(USE_DESKTOP)
-        set(APP_CONFIG_FILE "${CMAKE_CURRENT_SOURCE_DIR}/config/template-app.conf")
+        set(APP_CONFIG_FILE "${CMAKE_CURRENT_SOURCE_DIR}/config/square-sdr.conf")
     else()
-        set(APP_CONFIG_FILE "/etc/template-app.conf")
+        set(APP_CONFIG_FILE "/etc/square-sdr.conf")
     endif()
 endif()
 
@@ -69,6 +70,29 @@ endif()
 add_subdirectory("${lvgl_SOURCE_DIR}" "${lvgl_BINARY_DIR}" EXCLUDE_FROM_ALL)
 set(LVGL_SOURCE_DIR "${lvgl_SOURCE_DIR}")
 get_filename_component(LVGL_INCLUDE_PARENT "${LVGL_SOURCE_DIR}" DIRECTORY)
+
+# liquid-dsp provides AM/SSB demodulation and low-level CW DSP primitives.
+set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(BUILD_AUTOTESTS OFF CACHE BOOL "" FORCE)
+set(BUILD_BENCHMARKS OFF CACHE BOOL "" FORCE)
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+set(BUILD_STATIC_LIBS ON CACHE BOOL "" FORCE)
+set(BUILD_SANDBOX OFF CACHE BOOL "" FORCE)
+set(BUILD_DOC OFF CACHE BOOL "" FORCE)
+set(FIND_FFTW OFF CACHE BOOL "" FORCE)
+set(ENABLE_LOGGING OFF CACHE BOOL "" FORCE)
+set(ENABLE_COLOR OFF CACHE BOOL "" FORCE)
+if(NOT USE_DESKTOP)
+    set(ENABLE_SIMD OFF CACHE BOOL "" FORCE)
+    set(FIND_SIMD OFF CACHE BOOL "" FORCE)
+endif()
+FetchContent_Declare(
+    liquid
+    GIT_REPOSITORY https://github.com/jgaeddert/liquid-dsp.git
+    GIT_TAG        v1.8.3
+    GIT_SHALLOW    TRUE
+)
+FetchContent_MakeAvailable(liquid)
 
 # other misc dependencies
 # desktop builds
@@ -336,6 +360,21 @@ else()
         message(FATAL_ERROR "Missing math library in BSP sysroot: ${CM0_SYSROOT}")
     endif()
 
+    cm0_find_header(ALSA_INCLUDE_DIR alsa/asoundlib.h
+        "${CM0_SYSROOT}/usr/include"
+    )
+    cm0_find_library(ALSA_LIBRARY asound libasound.so.2.0.0)
+    if(NOT ALSA_LIBRARY)
+        set(_CM0_VERSIONED_ALSA_LIBRARY
+            "${CM0_SYSROOT}/usr/lib/${CM0_MULTIARCH}/libasound.so.2.0.0")
+        if(EXISTS "${_CM0_VERSIONED_ALSA_LIBRARY}")
+            set(ALSA_LIBRARY "${_CM0_VERSIONED_ALSA_LIBRARY}")
+        endif()
+    endif()
+    if(NOT ALSA_INCLUDE_DIR OR NOT ALSA_LIBRARY)
+        message(WARNING "ALSA headers/library not found in ${CM0_SYSROOT}; device audio output will be unavailable")
+    endif()
+
     set(PLATFORM_INCLUDE_DIR ${CM0_MULTIARCH_INCLUDE_DIRS})
     set(PLATFORM_LIBS ${PTHREAD_LIBRARY} ${M_LIBRARY})
 
@@ -413,6 +452,7 @@ target_include_directories(${PROJECT_NAME}_platform
     PUBLIC
         ${LVGL_INCLUDE_DIR}
         "${CMAKE_CURRENT_SOURCE_DIR}/src/platform"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/model"
 )
 
 target_compile_definitions(${PROJECT_NAME}_platform
@@ -426,7 +466,18 @@ target_compile_definitions(${PROJECT_NAME}_platform
 target_link_libraries(${PROJECT_NAME}_platform
     PUBLIC
         lvgl
+    liquid::liquid-static
 )
+
+if(NOT USE_DESKTOP)
+    if(ALSA_INCLUDE_DIR AND ALSA_LIBRARY)
+        target_include_directories(${PROJECT_NAME}_platform PRIVATE ${ALSA_INCLUDE_DIR})
+        target_link_libraries(${PROJECT_NAME}_platform PRIVATE ${ALSA_LIBRARY})
+        target_compile_definitions(${PROJECT_NAME}_platform PRIVATE SQUARE_SDR_HAS_ALSA=1)
+    else()
+        target_compile_definitions(${PROJECT_NAME}_platform PRIVATE SQUARE_SDR_HAS_ALSA=0)
+    endif()
+endif()
 
 # ====================================================
 # Model sources
@@ -557,6 +608,8 @@ target_include_directories(logger PUBLIC
     ${PLATFORM_INCLUDE_DIR}
 )
 
+target_compile_definitions(logger PUBLIC APP_LOG_LEVEL=${APP_LOG_LEVEL})
+
 target_link_libraries(logger
     PUBLIC
         fmt::fmt
@@ -628,6 +681,99 @@ target_link_libraries(${PROJECT_NAME}
         ${PROJECT_NAME}_view
         ${PROJECT_NAME}_viewmodel
 )
+
+include(CTest)
+if(BUILD_TESTING AND USE_DESKTOP)
+    add_executable(${PROJECT_NAME}_protocol_tests
+        tests/sdr_protocol_tests.cpp
+    )
+    target_link_libraries(${PROJECT_NAME}_protocol_tests
+        PRIVATE
+            ${PROJECT_NAME}_platform
+    )
+    add_test(NAME ${PROJECT_NAME}_protocol_tests COMMAND ${PROJECT_NAME}_protocol_tests)
+
+    add_executable(${PROJECT_NAME}_dsp_tests
+        tests/sdr_dsp_tests.cpp
+    )
+    target_link_libraries(${PROJECT_NAME}_dsp_tests
+        PRIVATE
+            ${PROJECT_NAME}_platform
+    )
+    add_test(NAME ${PROJECT_NAME}_dsp_tests COMMAND ${PROJECT_NAME}_dsp_tests)
+
+    add_executable(${PROJECT_NAME}_radio_settings_tests
+        tests/radio_settings_tests.cpp
+    )
+    target_link_libraries(${PROJECT_NAME}_radio_settings_tests
+        PRIVATE
+            ${PROJECT_NAME}_model
+    )
+    add_test(NAME ${PROJECT_NAME}_radio_settings_tests COMMAND ${PROJECT_NAME}_radio_settings_tests)
+
+    add_executable(${PROJECT_NAME}_rx_pipeline_tests
+        tests/receive_audio_pipeline_tests.cpp
+    )
+    target_link_libraries(${PROJECT_NAME}_rx_pipeline_tests
+        PRIVATE
+            ${PROJECT_NAME}_platform
+            ${PROJECT_NAME}_model
+    )
+    add_test(NAME ${PROJECT_NAME}_rx_pipeline_tests COMMAND ${PROJECT_NAME}_rx_pipeline_tests)
+
+    add_executable(${PROJECT_NAME}_audio_output_tests
+        tests/audio_output_tests.cpp
+    )
+    target_link_libraries(${PROJECT_NAME}_audio_output_tests
+        PRIVATE
+            ${PROJECT_NAME}_platform
+    )
+    add_test(NAME ${PROJECT_NAME}_audio_output_tests COMMAND ${PROJECT_NAME}_audio_output_tests)
+
+    add_executable(${PROJECT_NAME}_volume_overlay_tests
+        tests/volume_overlay_tests.cpp
+    )
+    target_link_libraries(${PROJECT_NAME}_volume_overlay_tests
+        PRIVATE
+            ${PROJECT_NAME}_core
+    )
+    add_test(NAME ${PROJECT_NAME}_volume_overlay_tests COMMAND ${PROJECT_NAME}_volume_overlay_tests)
+
+    add_executable(${PROJECT_NAME}_discovery_tests
+        tests/sdr_discovery_tests.cpp
+    )
+    target_link_libraries(${PROJECT_NAME}_discovery_tests
+        PRIVATE
+            ${PROJECT_NAME}_platform
+    )
+    add_test(NAME ${PROJECT_NAME}_discovery_tests COMMAND ${PROJECT_NAME}_discovery_tests)
+
+    add_executable(${PROJECT_NAME}_discovery_probe
+        tools/sdr_discovery_probe.cpp
+    )
+    target_link_libraries(${PROJECT_NAME}_discovery_probe
+        PRIVATE
+            ${PROJECT_NAME}_platform
+    )
+
+    add_executable(${PROJECT_NAME}_stream_tests
+        tests/sdr_stream_tests.cpp
+    )
+    target_link_libraries(${PROJECT_NAME}_stream_tests
+        PRIVATE
+            ${PROJECT_NAME}_platform
+    )
+    add_test(NAME ${PROJECT_NAME}_stream_tests COMMAND ${PROJECT_NAME}_stream_tests)
+
+    add_executable(${PROJECT_NAME}_stream_probe
+        tools/sdr_stream_probe.cpp
+    )
+    target_link_libraries(${PROJECT_NAME}_stream_probe
+        PRIVATE
+            ${PROJECT_NAME}_platform
+            ${PROJECT_NAME}_model
+    )
+endif()
 
 # Package deb
 include(cmake/cm0-package.cmake)

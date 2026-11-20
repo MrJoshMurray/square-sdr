@@ -62,6 +62,12 @@ uint32_t map_control_key(SDL_Keycode key) {
             return platform::kKeyPrintScreen;
         case SDLK_HELP:
             return platform::kKeyHelp;
+        case SDLK_MUTE:
+            return platform::kKeyMute;
+        case SDLK_VOLUMEDOWN:
+            return platform::kKeyVolumeDown;
+        case SDLK_VOLUMEUP:
+            return platform::kKeyVolumeUp;
         case SDLK_4:
         case SDLK_KP_4:
             return '4';
@@ -126,7 +132,7 @@ bool DesktopSimulatorFrame::initialize_sdl() {
         return false;
     }
 
-    window_ = SDL_CreateWindow("Template App",
+    window_ = SDL_CreateWindow("Square SDR",
                                SDL_WINDOWPOS_CENTERED,
                                SDL_WINDOWPOS_CENTERED,
                                kWidth,

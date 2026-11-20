@@ -19,7 +19,8 @@
                 "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/cmake/toolchains/cp0-aarch64-linux-gnu.cmake",
                 "CM0_SDK_ROOT": "${sourceDir}/.cache/sdk_bsp-src",
                 "CMAKE_SYSROOT": "${sourceDir}/.cache/sdk_bsp-src",
-                "CM0_ALLOW_FETCH_DEPS": "ON"
+                "CM0_ALLOW_FETCH_DEPS": "ON",
+                "APP_LOG_LEVEL": "APP_LOG_LEVEL_WARN"
             }
         },
         {

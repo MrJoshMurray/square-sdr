@@ -21,6 +21,9 @@ namespace view::widgets {
 namespace {
 
 constexpr uint32_t kDeviceRefreshTicks = 5;
+constexpr const char* kRadioDisconnected = "\uE46C";
+constexpr const char* kRadioReceiving = "\uE3D0";
+constexpr const char* kRadioTransmitting = "\uE3F8";
 
 const char* wifi_icon(int32_t strength_percent, bool connected) {
     if (!connected || strength_percent < 0) {
@@ -100,11 +103,21 @@ void TitleBar::build() {
     auto* title = lv_label_create(core_obj_);
     lv_label_bind_text(title, view_model_.title_subject(), nullptr);
     lv_label_set_long_mode(title, LV_LABEL_LONG_DOT);
-    lv_obj_set_width(title, 142);
+    lv_obj_set_width(title, 118);
     const lv_font_t* title_font = assets_.load_standard_font(14);
     lv_obj_set_style_text_font(title, title_font ? title_font : &lv_font_montserrat_14, 0);
     lv_obj_align(title, LV_ALIGN_LEFT_MID, 8, 0);
     reactive::bind_theme(title, view_model_.dark_mode_subject(), reactive::ThemeRole::Text);
+
+    const lv_font_t* icon_font = assets_.load_font("Phosphor-Fill.ttf", 16);
+    if (!icon_font) {
+        icon_font = &lv_font_montserrat_14;
+    }
+    radio_status_label_ = lv_label_create(core_obj_);
+    lv_obj_set_size(radio_status_label_, 18, 22);
+    lv_obj_set_style_text_font(radio_status_label_, icon_font, 0);
+    lv_obj_set_style_text_align(radio_status_label_, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_align_to(radio_status_label_, title, LV_ALIGN_OUT_RIGHT_MID, 4, 3);
 
     auto* status = lv_obj_create(core_obj_);
     lv_obj_remove_style_all(status);
@@ -115,10 +128,6 @@ void TitleBar::build() {
     lv_obj_set_style_pad_column(status, 3, 0);
     lv_obj_clear_flag(status, LV_OBJ_FLAG_SCROLLABLE);
 
-    const lv_font_t* icon_font = assets_.load_font("Phosphor-Fill.ttf", 16);
-    if (!icon_font) {
-        icon_font = &lv_font_montserrat_14;
-    }
     const lv_font_t* status_font =
         assets_.load_standard_font(14, app::StandardFontWeight::Regular);
     if (!status_font) {
@@ -137,6 +146,7 @@ void TitleBar::build() {
 
     refresh_time();
     refresh_device_status();
+    refresh_radio_status();
     refresh_timer_ = lv_timer_create(refresh_timer_cb, 1000, this);
 }
 
@@ -157,7 +167,11 @@ void TitleBar::refresh_device_status() {
     const auto status = platform::read_device_status();
 
     lv_label_set_text(wifi_label_, wifi_icon(status.wifi_strength_percent, status.wifi_connected));
+#if USE_DESKTOP
+    set_visible(wifi_label_, false);
+#else
     set_visible(wifi_label_, status.wifi_connected);
+#endif
 
     lv_label_set_text(ethernet_label_, ICON_ETHERNET);
     set_visible(ethernet_label_, status.ethernet_connected);
@@ -173,12 +187,30 @@ void TitleBar::refresh_device_status() {
     }
 }
 
+void TitleBar::refresh_radio_status() {
+    const auto state = static_cast<model::RadioConnectionState>(
+        lv_subject_get_int(view_model_.radio_connection_state_subject()));
+    const char* glyph = kRadioDisconnected;
+    lv_color_t color = lv_color_hex(0x808080);
+    if (state == model::RadioConnectionState::Receiving) {
+        glyph = kRadioReceiving;
+        color = lv_color_hex(0x20a050);
+    }
+    else if (state == model::RadioConnectionState::Transmitting) {
+        glyph = kRadioTransmitting;
+        color = lv_color_hex(0xd02030);
+    }
+    lv_label_set_text(radio_status_label_, glyph);
+    lv_obj_set_style_text_color(radio_status_label_, color, 0);
+}
+
 void TitleBar::refresh_timer_cb(lv_timer_t* timer) {
     auto* title_bar = static_cast<TitleBar*>(lv_timer_get_user_data(timer));
     if (!title_bar) {
         return;
     }
     title_bar->refresh_time();
+    title_bar->refresh_radio_status();
     if (++title_bar->refresh_tick_ >= kDeviceRefreshTicks) {
         title_bar->refresh_tick_ = 0;
         title_bar->refresh_device_status();

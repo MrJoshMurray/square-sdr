@@ -44,7 +44,8 @@ void BaseScreen::init() {
 
     content_ = lv_obj_create(root_);
     lv_obj_remove_style_all(content_);
-    lv_obj_set_size(content_, LV_PCT(100), view::kScreenHeight - view::kTitleBarHeight - view::kNavBarHeight);
+    const auto nav_height = view_model_.current_page() == model::AppPage::Butter ? 0 : view::kNavBarHeight;
+    lv_obj_set_size(content_, LV_PCT(100), view::kScreenHeight - view::kTitleBarHeight - nav_height);
     lv_obj_align(content_, LV_ALIGN_TOP_MID, 0, view::kTitleBarHeight);
     lv_obj_clear_flag(content_, LV_OBJ_FLAG_SCROLLABLE);
     reactive::bind_theme(content_, view_model_.dark_mode_subject(), reactive::ThemeRole::Surface);

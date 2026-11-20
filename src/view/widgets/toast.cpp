@@ -179,6 +179,40 @@ bool Toast::visible() const {
            !lv_obj_has_flag(core_obj_, LV_OBJ_FLAG_HIDDEN);
 }
 
+RadioDiscoveryNotice::RadioDiscoveryNotice(lv_obj_t* parent,
+                                           viewmodel::BaseViewModel& view_model,
+                                           app::AssetManager& assets)
+    : toast_(parent, view_model, assets) {}
+
+void RadioDiscoveryNotice::build() {
+    toast_.build();
+}
+
+void RadioDiscoveryNotice::update(model::RadioDiscoveryState state) {
+    if (state == state_) return;
+    state_ = state;
+    switch (state) {
+    case model::RadioDiscoveryState::NotFound:
+        toast_.show("No Radio Found\nConnect Radio", ToastTone::Warning, 5000);
+        break;
+    case model::RadioDiscoveryState::Error:
+        toast_.show("Radio Search Failed\nCheck Network", ToastTone::Error, 5000);
+        break;
+    case model::RadioDiscoveryState::Searching:
+    case model::RadioDiscoveryState::Found:
+        toast_.hide();
+        break;
+    }
+}
+
+bool RadioDiscoveryNotice::visible() const {
+    return toast_.visible();
+}
+
+lv_obj_t* RadioDiscoveryNotice::root() const {
+    return toast_.root();
+}
+
 void Toast::update_label_text() {
     if (!label_) {
         return;
@@ -274,6 +308,88 @@ void Toast::theme_observer_cb(lv_observer_t* observer, lv_subject_t*) {
     if (toast) {
         toast->apply_theme();
     }
+}
+
+VolumeOverlay::VolumeOverlay(lv_obj_t* parent, app::AssetManager& assets)
+    : BaseWidgets(parent), assets_(assets) {}
+
+VolumeOverlay::~VolumeOverlay() {
+    if (hide_timer_) lv_timer_delete(hide_timer_);
+}
+
+void VolumeOverlay::build() {
+    if (core_obj_ || !parent_) return;
+
+    core_obj_ = lv_obj_create(parent_);
+    lv_obj_remove_style_all(core_obj_);
+    lv_obj_set_size(core_obj_, 190, 64);
+    lv_obj_center(core_obj_);
+    lv_obj_set_style_radius(core_obj_, 7, 0);
+    lv_obj_set_style_bg_color(core_obj_, lv_color_hex(0x101923), 0);
+    lv_obj_set_style_bg_opa(core_obj_, LV_OPA_80, 0);
+    lv_obj_set_style_border_color(core_obj_, lv_color_hex(0x5586ad), 0);
+    lv_obj_set_style_border_width(core_obj_, 1, 0);
+    lv_obj_set_style_border_opa(core_obj_, LV_OPA_60, 0);
+    lv_obj_clear_flag(core_obj_, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_clear_flag(core_obj_, LV_OBJ_FLAG_CLICKABLE);
+
+    icon_ = lv_label_create(core_obj_);
+    lv_obj_set_style_text_font(icon_, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_color(icon_, lv_color_hex(0xffd323), 0);
+    lv_obj_align(icon_, LV_ALIGN_TOP_LEFT, 13, 11);
+
+    const lv_font_t* font = assets_.load_standard_font(12);
+    if (!font) font = &lv_font_montserrat_12;
+    title_ = lv_label_create(core_obj_);
+    lv_obj_set_style_text_font(title_, font, 0);
+    lv_obj_set_style_text_color(title_, lv_color_white(), 0);
+    lv_obj_align(title_, LV_ALIGN_TOP_LEFT, 37, 12);
+
+    percent_ = lv_label_create(core_obj_);
+    lv_obj_set_style_text_font(percent_, font, 0);
+    lv_obj_set_style_text_color(percent_, lv_color_white(), 0);
+    lv_obj_align(percent_, LV_ALIGN_TOP_RIGHT, -13, 12);
+
+    bar_ = lv_bar_create(core_obj_);
+    lv_obj_set_size(bar_, 164, 8);
+    lv_obj_align(bar_, LV_ALIGN_BOTTOM_MID, 0, -13);
+    lv_obj_set_style_radius(bar_, LV_RADIUS_CIRCLE, LV_PART_MAIN);
+    lv_obj_set_style_bg_color(bar_, lv_color_hex(0xe4e9ec), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(bar_, LV_OPA_COVER, LV_PART_MAIN);
+    lv_obj_set_style_radius(bar_, LV_RADIUS_CIRCLE, LV_PART_INDICATOR);
+    lv_obj_set_style_bg_color(bar_, lv_color_hex(0xffd323), LV_PART_INDICATOR);
+    lv_obj_set_style_bg_opa(bar_, LV_OPA_COVER, LV_PART_INDICATOR);
+    lv_bar_set_range(bar_, 0, 100);
+    lv_obj_add_flag(core_obj_, LV_OBJ_FLAG_HIDDEN);
+}
+
+void VolumeOverlay::show(int percent, bool muted) {
+    if (!core_obj_) build();
+    if (!core_obj_) return;
+
+    percent = std::clamp(percent, 0, 100);
+    lv_label_set_text(icon_, muted ? LV_SYMBOL_MUTE : LV_SYMBOL_VOLUME_MAX);
+    lv_label_set_text(title_, muted ? "Muted" : "Volume");
+    lv_label_set_text_fmt(percent_, "%d%%", percent);
+    lv_obj_align(percent_, LV_ALIGN_TOP_RIGHT, -13, 12);
+    lv_bar_set_value(bar_, percent, LV_ANIM_OFF);
+    lv_obj_set_style_bg_opa(bar_, muted ? LV_OPA_40 : LV_OPA_COVER, LV_PART_INDICATOR);
+    lv_obj_move_foreground(core_obj_);
+    lv_obj_remove_flag(core_obj_, LV_OBJ_FLAG_HIDDEN);
+
+    if (!hide_timer_) {
+        hide_timer_ = lv_timer_create(hide_timer_cb, 1800, this);
+        if (!hide_timer_) return;
+        lv_timer_set_auto_delete(hide_timer_, false);
+    }
+    lv_timer_set_repeat_count(hide_timer_, 1);
+    lv_timer_resume(hide_timer_);
+    lv_timer_reset(hide_timer_);
+}
+
+void VolumeOverlay::hide_timer_cb(lv_timer_t* timer) {
+    auto* overlay = static_cast<VolumeOverlay*>(lv_timer_get_user_data(timer));
+    if (overlay && overlay->core_obj_) lv_obj_add_flag(overlay->core_obj_, LV_OBJ_FLAG_HIDDEN);
 }
 
 } // namespace view::widgets
