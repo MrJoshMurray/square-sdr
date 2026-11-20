@@ -25,9 +25,10 @@ colors are not calibrated signal-strength measurements. Receive audio uses
 automatic gain with a short startup fade and a 2% full-scale output limit.
 Keep the device volume low when starting a session and adjust it gradually.
 The receiver's approximate S reading uses pre-AGC in-band I/Q power and the
-HF convention of S9 = -73 dBm and 6 dB per S-unit. It assumes +20 dB receive
-gain and a nominal +3 dBm ADC full-scale reference, neither verified for this
-radio; it is not a calibrated S-meter. The receiver page shows PA temperature in
+HF convention of S9 = -73 dBm and 6 dB per S-unit. It currently uses a
+provisional -80 dBFS S9 reference to better match observed receive levels; it
+assumes +20 dB receive gain and a nominal +3 dBm ADC full-scale reference,
+neither verified for this radio. It is not a calibrated S-meter. The receiver page shows PA temperature in
 degrees Celsius, PA current in amps, estimated power and SWR, and PTT/ADC-overload
 alerts. Temperature and current use the nominal Hermes-Lite reference voltage
 and have not been calibrated against instruments. Power and
@@ -97,6 +98,15 @@ In this example project, we used small MVVM-style structure around LVGL:
 - Receiver page: live panadapter/waterfall, signal level, radio telemetry, frequency, band, mode, bandwidth, and tuning step. The panadapter marks the selected passband: USB/CW to the right, LSB to the left, and AM across both sides. `Left`/`Right` or `Z`/`C` tune; holding them repeats.
 - Band defaults follow common HF convention: `160m` through `40m` use LSB, `30m` uses CW, and `20m` and above use USB. Selecting a band also restores that mode's default bandwidth.
 - Setup page: intentionally blank until settings are implemented. `ESC` returns to the receiver.
+
+## Hardware Validation
+
+The receive path has been tested with a Square SDR 2 and a Cardputer Zero using
+a real antenna. A clearly audible 40 m LSB signal from Bulgaria was received in
+the UK. Both 3.5 mm headphones and a USB headset produced working receive audio.
+Tuning direction and live waterfall movement have also been checked on hardware.
+The S-meter and waterfall gain are provisional display calibrations and still
+need testing against weaker signals such as FT8.
 
 ## Repository Layout
 
@@ -588,6 +598,20 @@ Or run the full configure, release build, and package flow with one workflow pre
 
 ```shell
 cmake --workflow --preset cp0-cross-package
+```
+
+### Latest GitHub Test Package
+
+The current ARM64 test package is available as a GitHub prerelease. It is not a
+Cardputer Store release. Download and verify it on the Cardputer with:
+
+```shell
+curl -fL \
+  -o "$HOME/Square SDR_0.2.1_rev1_arm64.deb" \
+  'https://github.com/MrJoshMurray/square-sdr/releases/download/v0.2.1-rev1/Square%20SDR_0.2.1_rev1_arm64.deb'
+sha256sum "$HOME/Square SDR_0.2.1_rev1_arm64.deb"
+sudo apt install --reinstall -y --no-install-recommends \
+  "$HOME/Square SDR_0.2.1_rev1_arm64.deb"
 ```
 
 > [!NOTE]
