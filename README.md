@@ -13,6 +13,10 @@ Zero's limited CPU and memory: the live analyzer caches window coefficients,
 minimizes time under the IQ-buffer lock, and the device preset compiles out
 trace/debug/info logging.
 
+TX support is planned for a future phase, including PTT/MOX control, microphone
+input, RF drive, and transmit telemetry. It is intentionally not implemented in
+the current receive-only build.
+
 If discovery receives no radio reply, a brief warning appears while discovery
 continues retrying. Network discovery errors show a separate warning.
 
