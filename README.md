@@ -40,6 +40,8 @@ Transmit is on, so please be sensible:
 
 Voice modes use a microphone (the built-in one or a USB headset) with automatic levelling. The Cardputer's speaker mutes while you're keyed to stop feedback. In CW mode, holding the key sends a carrier with a sidetone.
 
+**Plug in a USB headset before launching the app.** Plugging it in while the app is running can upset the audio.
+
 If you use a USB headset for both mic and earphones, copy `config/51-square-sdr-usb-duplex.conf` into WirePlumber's config so both directions work together.
 
 ## Install on the device
