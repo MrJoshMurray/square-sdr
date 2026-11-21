@@ -27,6 +27,7 @@ enum class ToastTone {
     Success,
     Warning,
     Error,
+    Alarm,
 };
 
 struct ToastConfig {

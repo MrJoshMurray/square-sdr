@@ -288,9 +288,11 @@ void Toast::apply_theme() {
     }
 
     const auto colors = view::palette(view_model_.is_dark_mode());
-    lv_obj_set_style_bg_color(core_obj_, colors.button, 0);
+    const bool alarm = tone_ == ToastTone::Alarm;
+    lv_obj_set_style_bg_color(core_obj_, alarm ? lv_color_hex(0xd00000) : colors.button, 0);
+    lv_obj_set_style_bg_opa(core_obj_, alarm ? LV_OPA_COVER : LV_OPA_90, 0);
     lv_obj_set_style_shadow_color(core_obj_, lv_color_black(), 0);
-    lv_obj_set_style_text_color(label_, colors.text, 0);
+    lv_obj_set_style_text_color(label_, alarm ? lv_color_white() : colors.text, 0);
     update_label_text();
     lv_obj_update_layout(label_);
     lv_obj_center(label_);

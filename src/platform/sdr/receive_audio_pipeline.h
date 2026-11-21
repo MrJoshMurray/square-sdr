@@ -7,6 +7,7 @@
 #pragma once
 
 #include "audio_output.h"
+#include "auto_notch.h"
 #include "metis_protocol.h"
 #include "receive_demodulator.h"
 
@@ -35,6 +36,7 @@ public:
     bool configure_if_changed(const DemodulatorSettings& settings, std::string& error);
     bool process_datagram(const uint8_t* data, size_t size, std::string& error);
     std::optional<float> signal_level_dbfs() const;
+    void set_auto_notch(bool enabled);
     void reset();
 
 private:
@@ -42,6 +44,8 @@ private:
     ReceiveDemodulator demodulator_;
     std::optional<DemodulatorSettings> settings_;
     agc_rrrf_s* audio_agc_{nullptr};
+    AutoNotch notch_;
+    bool notch_enabled_{false};
     float audio_level_{0.0f};
     size_t fade_samples_{0};
     size_t fade_position_{0};

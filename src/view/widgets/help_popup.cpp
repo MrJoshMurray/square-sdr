@@ -21,19 +21,21 @@ struct HelpRow {
     const char* action;
 };
 
-constexpr std::array<HelpRow, 5> kAppleRows = {{
+constexpr std::array<HelpRow, 7> kAppleRows = {{
     {"HOLD ESC", "Exit"},
     {"LEFT / RIGHT", "Tune"},
-    {"S / Step", "Tune step"},
-    {"4 / B / M / W", "Band / mode / filter"},
-    {"8", "RX settings"},
+    {"4 5 6 7", "Band/mode/filter/step"},
+    {"N", "Auto notch"},
+    {"R", "RIT on / off"},
+    {"F / X", "RIT up / down"},
+    {"8", "Settings"},
 }};
 
 constexpr std::array<HelpRow, 4> kButterRows = {{
     {"ESC", "Back to receiver"},
-    {"LEFT / RIGHT", "Mode"},
-    {"W / BW", "Filter width"},
-    {"B", "Next UK band"},
+    {"F / X", "Select setting"},
+    {"Z / C", "Change value"},
+    {"Fn+F/X/Z/C", "Arrow keys"},
 }};
 
 } // namespace
@@ -59,7 +61,7 @@ void HelpPopup::build() {
 
     panel_ = lv_obj_create(core_obj_);
     lv_obj_remove_style_all(panel_);
-    lv_obj_set_size(panel_, 292, 146);
+    lv_obj_set_size(panel_, 292, 160);
     lv_obj_center(panel_);
     lv_obj_set_style_radius(panel_, 6, 0);
     lv_obj_set_style_bg_opa(panel_, LV_OPA_COVER, 0);
@@ -86,11 +88,11 @@ void HelpPopup::build() {
 
     auto* rows = lv_obj_create(panel_);
     lv_obj_remove_style_all(rows);
-    lv_obj_set_size(rows, 268, 88);
+    lv_obj_set_size(rows, 268, 105);
     lv_obj_align(rows, LV_ALIGN_TOP_MID, 0, 35);
     lv_obj_set_flex_flow(rows, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_flex_align(rows, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START);
-    lv_obj_set_style_pad_row(rows, 1, 0);
+    lv_obj_set_style_pad_row(rows, 0, 0);
     lv_obj_clear_flag(rows, LV_OBJ_FLAG_SCROLLABLE);
 
     auto* key_font = assets_.load_standard_font(11);
@@ -98,7 +100,7 @@ void HelpPopup::build() {
     for (auto& widgets : rows_) {
         widgets.row = lv_obj_create(rows);
         lv_obj_remove_style_all(widgets.row);
-        lv_obj_set_size(widgets.row, LV_PCT(100), 16);
+        lv_obj_set_size(widgets.row, LV_PCT(100), 15);
         lv_obj_clear_flag(widgets.row, LV_OBJ_FLAG_SCROLLABLE);
 
         widgets.key = lv_label_create(widgets.row);

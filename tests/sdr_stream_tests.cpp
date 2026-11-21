@@ -18,6 +18,11 @@ int main() {
         assert(start[index] == 0);
         assert(stop[index] == 0);
     }
+    const auto tx = platform::sdr::make_metis_transmit_config_packet(14200000, {true, 0x20});
+    assert(tx[11] == 0x03 && tx[12] == 0x00 && tx[13] == 0xD8 && tx[14] == 0xAC && tx[15] == 0xC0);
+    assert(tx[523] == 0x13 && tx[524] == 0x20 && tx[525] == 0x08);
+    const auto tx_off = platform::sdr::make_metis_transmit_config_packet(14200000, {false, 0x20});
+    assert(tx_off[11] == 0x02 && tx_off[523] == 0x12 && tx_off[524] == 0x00 && tx_off[525] == 0x00);
     const auto config = platform::sdr::make_metis_receiver_config_packet(14200000);
     assert(config[0] == 0xEF && config[1] == 0xFE
         && config[2] == 0x01 && config[3] == 0x02);

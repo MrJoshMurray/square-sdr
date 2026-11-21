@@ -32,6 +32,10 @@ install(TARGETS ${PROJECT_NAME}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
 
+# Lets PipeWire capture and play on a USB headset at the same time (otherwise the mic stalls).
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/config/51-square-sdr-usb-duplex.conf"
+    DESTINATION "/etc/wireplumber/wireplumber.conf.d")
+
 install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/config/square-sdr.conf"
     DESTINATION "/etc"
 )

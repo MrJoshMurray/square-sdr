@@ -31,11 +31,15 @@ enum class VolumeAction {
     Down,
     Up,
     ToggleMute,
+    Mute,
+    Unmute,
 };
 
 struct VolumeState {
     int percent{0};
     bool muted{false};
+    // Set for app-initiated mute changes that should not show the volume overlay.
+    bool silent{false};
 };
 
 class SystemVolumeControl {
@@ -96,6 +100,12 @@ public:
     bool open(const std::string& device_id, uint32_t sample_rate, std::string& error);
     bool write(const int16_t* mono_samples, size_t frame_count, std::string& error) override;
     void request_band_edge_tone();
+    // Discard queued audio so the next write plays immediately.
+    void flush();
+    // Start playback without waiting for the device buffer to fill.
+    void start_now();
+    // Frames queued for playback but not yet heard.
+    size_t queued_frames() const;
     void close();
     bool is_open() const;
 

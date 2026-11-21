@@ -187,6 +187,14 @@ uint32_t map_evdev_key(uint16_t code) {
     switch (code) {
         case KEY_ESC:
             return LV_KEY_ESC;
+        case KEY_TAB:
+            return LV_KEY_NEXT;
+        case KEY_SPACE:
+            return ' ';
+        case KEY_UP:
+            return LV_KEY_UP;
+        case KEY_DOWN:
+            return LV_KEY_DOWN;
         case KEY_LEFT:
             return LV_KEY_LEFT;
         case KEY_RIGHT:
@@ -201,6 +209,10 @@ uint32_t map_evdev_key(uint16_t code) {
             return 'u';
         case KEY_I:
             return 'i';
+        case KEY_F:
+            return 'f';
+        case KEY_X:
+            return 'x';
         case KEY_Z:
             return 'z';
         case KEY_C:
@@ -213,6 +225,16 @@ uint32_t map_evdev_key(uint16_t code) {
             return 'w';
         case KEY_S:
             return 's';
+        case KEY_R:
+            return 'r';
+        case KEY_N:
+            return 'n';
+        case KEY_COMMA:
+            return ',';
+        case KEY_DOT:
+            return '.';
+        case KEY_SLASH:
+            return '/';
         case KEY_4:
             return '4';
         case KEY_5:
@@ -225,6 +247,7 @@ uint32_t map_evdev_key(uint16_t code) {
             return '8';
         case KEY_SYSRQ:
             return kKeyPrintScreen;
+        case KEY_H:
         case KEY_HELP:
             return kKeyHelp;
         default:
@@ -243,7 +266,7 @@ bool has_nav_keys(int fd) {
         return (key_bits[code / bits_per_word] & (1UL << (code % bits_per_word))) != 0;
     };
 
-        return has_key(KEY_ESC) || has_key(KEY_LEFT) || has_key(KEY_RIGHT) || has_key(KEY_Z) ||
+        return has_key(KEY_ESC) || has_key(KEY_UP) || has_key(KEY_DOWN) || has_key(KEY_F) || has_key(KEY_X) || has_key(KEY_LEFT) || has_key(KEY_RIGHT) || has_key(KEY_Z) ||
             has_key(KEY_C) || has_key(KEY_B) ||
                has_key(KEY_M) || has_key(KEY_W) || has_key(KEY_S) || has_key(KEY_4) ||
                has_key(KEY_5) || has_key(KEY_6) || has_key(KEY_MUTE) ||

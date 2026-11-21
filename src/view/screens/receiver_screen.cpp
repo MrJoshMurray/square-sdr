@@ -96,11 +96,21 @@ void ReceiverScreen::build_content(lv_obj_t* content) {
     reactive::bind_theme(band_mode, view_model().dark_mode_subject(), reactive::ThemeRole::Text);
     auto* signal_level = lv_label_create(content);
     lv_label_bind_text(signal_level, view_model().signal_level_subject(), nullptr);
+    lv_label_set_recolor(signal_level, true);
     lv_obj_set_size(signal_level, 120, LV_SIZE_CONTENT);
     lv_obj_set_pos(signal_level, 184, 0);
     lv_obj_set_style_text_align(signal_level, LV_TEXT_ALIGN_RIGHT, 0);
     set_label_font(signal_level, assets(), 12);
     reactive::bind_theme(signal_level, view_model().dark_mode_subject(), reactive::ThemeRole::Text);
+    reactive::observe_obj(signal_level, view_model().mic_clip_subject(), [](lv_observer_t* observer, lv_subject_t* subject) {
+        auto* label = lv_observer_get_target_obj(observer);
+        if (lv_subject_get_int(subject)) {
+            lv_obj_set_style_text_color(label, lv_color_hex(0xff3b30), 0);
+        } else {
+            auto* dark = static_cast<lv_subject_t*>(lv_observer_get_user_data(observer));
+            lv_obj_set_style_text_color(label, view::palette(lv_subject_get_int(dark) != 0).text, 0);
+        }
+    }, view_model().dark_mode_subject());
     auto* alert = lv_label_create(content);
     lv_label_bind_text(alert, view_model().radio_alert_subject(), nullptr);
     lv_obj_set_size(alert, 88, LV_SIZE_CONTENT);
@@ -124,7 +134,7 @@ void ReceiverScreen::build_content(lv_obj_t* content) {
     auto* frequency = lv_label_create(content);
     lv_label_bind_text(frequency, view_model().frequency_subject(), nullptr);
     lv_obj_set_size(frequency, 160, LV_SIZE_CONTENT);
-    lv_obj_set_pos(frequency, 16, 12);
+    lv_obj_set_pos(frequency, 8, 12);
     lv_obj_set_style_text_align(frequency, LV_TEXT_ALIGN_CENTER, 0);
     set_label_font(frequency, assets(), 20);
     reactive::bind_theme(frequency, view_model().dark_mode_subject(), reactive::ThemeRole::Text);

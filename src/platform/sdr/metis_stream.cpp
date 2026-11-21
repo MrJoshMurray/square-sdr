@@ -32,6 +32,33 @@ uint8_t receive_filter_outputs(uint32_t frequency_hz) noexcept {
     return 0;
 }
 
+// Constant I with zero Q in each 8-byte sample group yields a carrier at the dial frequency.
+void fill_tx_carrier(std::array<uint8_t, 1032>& packet) noexcept {
+    constexpr int16_t kCarrierLevel = 0x5A00;
+    for (size_t block = 0; block < 2; ++block) {
+        const size_t samples = 8 + block * 512 + 8;
+        for (size_t group = 0; group < 63; ++group) {
+            const size_t offset = samples + group * 8;
+            packet[offset + 4] = static_cast<uint8_t>(kCarrierLevel >> 8);
+            packet[offset + 5] = static_cast<uint8_t>(kCarrierLevel & 0xFF);
+        }
+    }
+}
+
+void fill_tx_samples(std::array<uint8_t, 1032>& packet, const int16_t* iq) noexcept {
+    for (size_t block = 0; block < 2; ++block) {
+        const size_t samples = 8 + block * 512 + 8;
+        for (size_t group = 0; group < 63; ++group) {
+            const size_t offset = samples + group * 8;
+            const size_t index = (block * 63 + group) * 2;
+            packet[offset + 4] = static_cast<uint8_t>(static_cast<uint16_t>(iq[index]) >> 8);
+            packet[offset + 5] = static_cast<uint8_t>(static_cast<uint16_t>(iq[index]) & 0xFF);
+            packet[offset + 6] = static_cast<uint8_t>(static_cast<uint16_t>(iq[index + 1]) >> 8);
+            packet[offset + 7] = static_cast<uint8_t>(static_cast<uint16_t>(iq[index + 1]) & 0xFF);
+        }
+    }
+}
+
 } // namespace
 
 std::array<uint8_t, 60> make_metis_iq_stream_command(bool enabled) noexcept {
@@ -41,6 +68,36 @@ std::array<uint8_t, 60> make_metis_iq_stream_command(bool enabled) noexcept {
     command[2] = 0x04;
     command[3] = enabled ? 0x01 : 0x00;
     return command;
+}
+
+std::array<uint8_t, 1032> make_metis_transmit_config_packet(uint32_t frequency_hz,
+                                                           const MetisTransmitControl& control) noexcept {
+    std::array<uint8_t, 1032> packet{};
+    packet[0] = 0xEF;
+    packet[1] = 0xFE;
+    packet[2] = 0x01;
+    packet[3] = 0x02;
+    const uint8_t mox = control.mox ? 0x01 : 0x00;
+    for (size_t block = 0; block < 2; ++block) {
+        const size_t offset = 8 + block * 512;
+        packet[offset] = 0x7F;
+        packet[offset + 1] = 0x7F;
+        packet[offset + 2] = 0x7F;
+        if (block == 0) {
+            packet[offset + 3] = static_cast<uint8_t>(0x02 | mox);
+            packet[offset + 4] = static_cast<uint8_t>(frequency_hz >> 24);
+            packet[offset + 5] = static_cast<uint8_t>(frequency_hz >> 16);
+            packet[offset + 6] = static_cast<uint8_t>(frequency_hz >> 8);
+            packet[offset + 7] = static_cast<uint8_t>(frequency_hz);
+        }
+        else {
+            packet[offset + 3] = static_cast<uint8_t>(0x12 | mox);
+            packet[offset + 4] = control.mox ? control.drive : 0;
+            // C2 bit 3 enables the PA; it is only set while keyed.
+            packet[offset + 5] = control.mox ? 0x08 : 0x00;
+        }
+    }
+    return packet;
 }
 
 std::array<uint8_t, 1032> make_metis_receiver_config_packet(uint32_t frequency_hz) noexcept {
@@ -144,14 +201,62 @@ bool MetisIqStream::start(std::string& error) {
     return true;
 }
 
-bool MetisIqStream::configure_receiver(uint32_t frequency_hz, std::string& error) {
+bool MetisIqStream::configure_receiver(uint32_t frequency_hz,
+                                       std::string& error,
+                                       const MetisTransmitControl& transmit) {
     error.clear();
     if (socket_fd_ < 0 || !radio_address_) {
         error = "Metis stream is not open";
         return false;
     }
 
-    const auto packet = make_metis_receiver_config_packet(frequency_hz);
+    auto receiver = make_metis_receiver_config_packet(frequency_hz);
+    if (transmit.mox) {
+        // MOX is bit 0 of every C0 byte.
+        receiver[11] |= 0x01;
+        receiver[523] |= 0x01;
+    }
+    const auto send_packet = [&](const std::array<uint8_t, 1032>& packet) {
+        const ssize_t sent = sendto(socket_fd_,
+                                    packet.data(),
+                                    packet.size(),
+                                    0,
+                                    reinterpret_cast<const sockaddr*>(radio_address_),
+                                    sizeof(*radio_address_));
+        if (sent != static_cast<ssize_t>(packet.size())) {
+            error = std::strerror(errno);
+            return false;
+        }
+        return true;
+    };
+    if (!send_packet(receiver)) return false;
+    // Receive-only operation sends exactly the original receiver frame.
+    if (!transmit.mox && !transmit.release) return true;
+    return send_packet(make_metis_transmit_config_packet(frequency_hz, transmit));
+}
+
+bool MetisIqStream::send_transmit_frame(uint32_t frequency_hz,
+                                        const MetisTransmitControl& transmit,
+                                        uint32_t phase,
+                                        std::string& error) {
+    error.clear();
+    if (socket_fd_ < 0 || !radio_address_) {
+        error = "Metis stream is not open";
+        return false;
+    }
+    std::array<uint8_t, 1032> packet{};
+    if (phase % 2 == 0) {
+        packet = make_metis_receiver_config_packet(frequency_hz);
+        if (transmit.mox) {
+            packet[11] |= 0x01;
+            packet[523] |= 0x01;
+        }
+    }
+    else {
+        packet = make_metis_transmit_config_packet(frequency_hz, transmit);
+    }
+    if (transmit.mox && transmit.carrier) fill_tx_carrier(packet);
+    else if (transmit.mox && transmit.iq) fill_tx_samples(packet, transmit.iq);
     const ssize_t sent = sendto(socket_fd_,
                                 packet.data(),
                                 packet.size(),

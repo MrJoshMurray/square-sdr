@@ -28,8 +28,8 @@ struct ShortcutSpec {
 };
 
 constexpr std::array<ShortcutSpec, 2> kButterShortcuts = {{
-    {"Z/Left", "Prev"},
-    {"C/Right", "Next"},
+    {"F/X", "Select"},
+    {"Z/C", "Change"},
 }};
 
 } // namespace

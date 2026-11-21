@@ -60,6 +60,7 @@ uint32_t map_control_key(SDL_Keycode key) {
             return LV_KEY_END;
         case SDLK_PRINTSCREEN:
             return platform::kKeyPrintScreen;
+        case SDLK_h:
         case SDLK_HELP:
             return platform::kKeyHelp;
         case SDLK_MUTE:

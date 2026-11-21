@@ -16,14 +16,21 @@ ButterScreen::ButterScreen(viewmodel::BaseViewModel& view_model, app::AssetManag
 }
 
 void ButterScreen::build_content(lv_obj_t* content) {
-    auto* message = lv_label_create(content);
-    lv_label_set_text(message, "This page is intentionally blank");
-    auto* font = assets().load_standard_font(16, app::StandardFontWeight::Regular);
-    lv_obj_set_style_text_font(message, font ? font : &lv_font_montserrat_14, 0);
-    lv_obj_set_width(message, 288);
-    lv_obj_set_style_text_align(message, LV_TEXT_ALIGN_CENTER, 0);
-    lv_obj_center(message);
-    reactive::bind_theme(message, view_model().dark_mode_subject(), reactive::ThemeRole::Text);
+    auto* regular = assets().load_standard_font(14, app::StandardFontWeight::Regular);
+    auto* bold = assets().load_standard_font(14, app::StandardFontWeight::Bold);
+    for (int row = 0; row < model::BaseModel::kSettingRows; ++row) {
+        auto* title = lv_label_create(content);
+        lv_label_bind_text(title, view_model().setting_title_subject(row), nullptr);
+        lv_obj_set_style_text_font(title, bold ? bold : &lv_font_montserrat_14, 0);
+        lv_obj_set_pos(title, 8, 6 + row * 21);
+        reactive::bind_theme(title, view_model().dark_mode_subject(), reactive::ThemeRole::Text);
+
+        auto* value = lv_label_create(content);
+        lv_label_bind_text(value, view_model().setting_value_subject(row), nullptr);
+        lv_obj_set_style_text_font(value, regular ? regular : &lv_font_montserrat_14, 0);
+        lv_obj_set_pos(value, 150, 6 + row * 21);
+        reactive::bind_theme(value, view_model().dark_mode_subject(), reactive::ThemeRole::Text);
+    }
 }
 
 } // namespace screen

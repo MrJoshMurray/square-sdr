@@ -16,8 +16,8 @@
 namespace platform::sdr {
 namespace {
 
-constexpr float kAudioPeakLimit = 0.02f;
-constexpr float kAudioAgcScale = 0.01f;
+constexpr float kAudioPeakLimit = 0.08f;
+constexpr float kAudioAgcScale = 0.04f;
 constexpr float kAudioAgcMaxGain = 100000.0f;
 constexpr float kAudioAgcBandwidth = 0.0005f;
 
@@ -97,6 +97,7 @@ bool ReceiveAudioPipeline::process_datagram(const uint8_t* data,
         return false;
     }
 
+    if (notch_enabled_) notch_.process(audio_float_.data(), packet_.sample_count);
     if (!audio_agc_) {
         error = "Audio gain control is not configured";
         return false;
@@ -125,7 +126,13 @@ std::optional<float> ReceiveAudioPipeline::signal_level_dbfs() const {
     return demodulator_.signal_level_dbfs();
 }
 
+void ReceiveAudioPipeline::set_auto_notch(bool enabled) {
+    if (enabled && !notch_enabled_) notch_.reset();
+    notch_enabled_ = enabled;
+}
+
 void ReceiveAudioPipeline::reset() {
+    notch_.reset();
     demodulator_.reset();
     if (audio_agc_) {
         agc_rrrf_reset(audio_agc_);

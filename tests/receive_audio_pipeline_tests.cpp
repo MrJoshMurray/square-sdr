@@ -118,7 +118,7 @@ int main() {
         peak = std::max(peak, std::abs(static_cast<int32_t>(sample)));
     }
     assert(peak > 100);
-    assert(peak <= 656);
+    assert(peak <= 2622);
     assert(sink.pcm.front() == 0);
     const auto normal_level = pipeline.signal_level_dbfs();
     assert(normal_level.has_value());
@@ -144,7 +144,7 @@ int main() {
         }
         assert(sink.pcm[start] == 0);
         for (size_t index = start; index < sink.pcm.size(); ++index) {
-            assert(std::abs(static_cast<int32_t>(sink.pcm[index])) <= 656);
+            assert(std::abs(static_cast<int32_t>(sink.pcm[index])) <= 2622);
         }
     }
 
@@ -191,6 +191,6 @@ int main() {
     }
     assert(weak_peak > 10);
     assert(recovered_peak > 10);
-    assert(transition_peak <= 656);
+    assert(transition_peak <= 2622);
     assert(sink.pcm.front() == 0);
 }

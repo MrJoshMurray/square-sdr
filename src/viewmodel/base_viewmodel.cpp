@@ -8,7 +8,11 @@
 
 #include <cstdio>
 #include <cstring>
+#include <string>
 #include <algorithm>
+
+// Raw microphone peaks above this are at risk of clipping in the capture hardware.
+constexpr int kMicClipDbfs = -3;
 
 namespace viewmodel {
 namespace {
@@ -18,6 +22,24 @@ int page_to_int(model::AppPage page) {
 }
 
 constexpr int kS9ReferenceDbfs = -80;
+
+// 12-segment LED bar; the lit segments in the last three positions are drawn red
+// (LVGL label recolor markup).
+std::string led_bar(int lit) {
+    std::string bar;
+    bool red = false;
+    for (int i = 0; i < 12; ++i) {
+        const bool in_red_zone = i >= 9 && i < lit;
+        if (in_red_zone != red) {
+            bar += '#';
+            if (in_red_zone) bar += "ff3b30 ";
+            red = in_red_zone;
+        }
+        bar += i < lit ? '|' : '.';
+    }
+    if (red) bar += '#';
+    return bar;
+}
 
 void format_frequency(uint64_t frequency_hz, char* output, size_t output_size) {
     std::snprintf(output,
@@ -71,7 +93,14 @@ BaseViewModel::BaseViewModel()
     radio_pa_subject_(""),
     radio_inputs_subject_(""),
     radio_alert_subject_(""),
+            mic_clip_subject_(0),
             radio_connection_state_subject_(static_cast<int>(model::RadioConnectionState::Disconnected)),
+      setting_title_subjects_{{reactive::StringSubject<24>(""), reactive::StringSubject<24>(""),
+                               reactive::StringSubject<24>(""), reactive::StringSubject<24>(""),
+                               reactive::StringSubject<24>(""), reactive::StringSubject<24>("")}},
+      setting_value_subjects_{{reactive::StringSubject<40>(""), reactive::StringSubject<40>(""),
+                               reactive::StringSubject<40>(""), reactive::StringSubject<40>(""),
+                               reactive::StringSubject<40>(""), reactive::StringSubject<40>("")}},
       dark_mode_subject_(model_.dark_mode()),
       current_page_subject_(page_to_int(model_.current_page())),
       counter_subject_(0),
@@ -118,6 +147,8 @@ lv_subject_t* BaseViewModel::radio_pa_subject() { return radio_pa_subject_.nativ
 lv_subject_t* BaseViewModel::radio_inputs_subject() { return radio_inputs_subject_.native(); }
 lv_subject_t* BaseViewModel::radio_alert_subject() { return radio_alert_subject_.native(); }
 
+lv_subject_t* BaseViewModel::mic_clip_subject() { return mic_clip_subject_.native(); }
+
 lv_subject_t* BaseViewModel::radio_connection_state_subject() {
     return radio_connection_state_subject_.native();
 }
@@ -162,6 +193,8 @@ uint32_t BaseViewModel::filter_bandwidth_hz() const {
     return model_.filter_bandwidth_hz();
 }
 
+bool BaseViewModel::transmit_allowed() const { return model_.transmit_allowed(); }
+
 void BaseViewModel::set_radio_connection_state(model::RadioConnectionState state) {
     lv_subject_set_int(radio_connection_state_subject_.native(), static_cast<int>(state));
 }
@@ -170,18 +203,34 @@ void BaseViewModel::set_radio_measurements(const model::RadioMeasurements& measu
     model_.set_radio_measurements(measurements);
     const auto& current = model_.radio_measurements();
     char text[64]{};
-    if (current.signal_level_dbfs) {
-        const int above_s9 = *current.signal_level_dbfs - kS9ReferenceDbfs;
-        if (above_s9 > 0) {
-            std::snprintf(text, sizeof(text), "~S9+%d dB", above_s9);
-        } else {
-            const int s_unit = std::clamp(9 + above_s9 / 6 - (above_s9 % 6 != 0 ? 1 : 0), 0, 9);
-            std::snprintf(text, sizeof(text), "~S%d", s_unit);
+    if (current.ptt && *current.ptt) {
+        if (!current.mic_level_dbfs) std::snprintf(text, sizeof(text), "TX");
+        else if (*current.mic_level_dbfs <= -120) std::snprintf(text, sizeof(text), "TX no mic");
+        else {
+            // LED-style bar: -48 dBFS (empty) to 0 dBFS (full), 12 segments.
+            const int lit = std::clamp((*current.mic_level_dbfs + 48 + 2) / 4, 0, 12);
+            std::snprintf(text, sizeof(text), "TX %s", led_bar(lit).c_str());
         }
+    } else if (current.signal_level_dbfs) {
+        const int above_s9 = *current.signal_level_dbfs - kS9ReferenceDbfs;
+        int s_unit = 9;
+        int lit = 9;
+        if (above_s9 > 0) {
+            lit = 9 + std::clamp(above_s9 / 10, 0, 3);
+            std::snprintf(text, sizeof(text), "~S9+%d dB ", above_s9);
+        } else {
+            s_unit = std::clamp(9 + above_s9 / 6 - (above_s9 % 6 != 0 ? 1 : 0), 0, 9);
+            lit = s_unit;
+            std::snprintf(text, sizeof(text), "~S%d ", s_unit);
+        }
+        std::strncat(text, led_bar(lit).c_str(), sizeof(text) - std::strlen(text) - 1);
     } else {
         std::snprintf(text, sizeof(text), "S --");
     }
     if (std::strcmp(signal_level_subject_.value(), text) != 0) signal_level_subject_.set(text);
+    const bool mic_clipping = current.ptt && *current.ptt && current.mic_level_dbfs
+                           && *current.mic_level_dbfs > kMicClipDbfs;
+    lv_subject_set_int(mic_clip_subject_.native(), mic_clipping ? 1 : 0);
 
     char power[16] = "--";
     char swr[16] = "--";
@@ -209,11 +258,47 @@ void BaseViewModel::set_radio_measurements(const model::RadioMeasurements& measu
                   current.ptt ? (*current.ptt ? "ON" : "OFF") : "--",
                   current.adc_overload ? (*current.adc_overload ? "YES" : "NO") : "--");
     if (std::strcmp(radio_inputs_subject_.value(), text) != 0) radio_inputs_subject_.set(text);
-    std::snprintf(text, sizeof(text), "%s%s%s",
-                  current.ptt && *current.ptt ? "PTT" : "",
-                  current.ptt && *current.ptt && current.adc_overload && *current.adc_overload ? " " : "",
-                  current.adc_overload && *current.adc_overload ? "ADC CLIP" : "");
-    if (std::strcmp(radio_alert_subject_.value(), text) != 0) radio_alert_subject_.set(text);
+    publish_alert();
+}
+
+bool BaseViewModel::auto_notch() const { return model_.auto_notch(); }
+int BaseViewModel::rit_hz() const { return model_.rit_hz(); }
+
+void BaseViewModel::toggle_auto_notch() {
+    model_.toggle_auto_notch();
+    publish_alert();
+}
+
+void BaseViewModel::adjust_rit(int direction) {
+    model_.adjust_rit(direction);
+    publish_alert();
+}
+
+bool BaseViewModel::rit_active() const { return model_.rit_active(); }
+
+void BaseViewModel::toggle_rit() {
+    model_.toggle_rit();
+    publish_alert();
+}
+
+void BaseViewModel::clear_rit() {
+    model_.clear_rit();
+    publish_alert();
+}
+
+// Status flags beside the band: ADC clipping, RIT offset and the auto notch.
+void BaseViewModel::publish_alert() {
+    const auto& current = model_.radio_measurements();
+    std::string text;
+    if (current.adc_overload && *current.adc_overload) text += "CLIP ";
+    if (model_.rit_active()) {
+        char rit[16];
+        std::snprintf(rit, sizeof(rit), "R%+d ", model_.rit_hz());
+        text += rit;
+    }
+    if (model_.auto_notch()) text += "NOTCH";
+    while (!text.empty() && text.back() == ' ') text.pop_back();
+    if (std::strcmp(radio_alert_subject_.value(), text.c_str()) != 0) radio_alert_subject_.set(text.c_str());
 }
 
 void BaseViewModel::set_dark_mode(bool enabled) {
@@ -297,7 +382,73 @@ void BaseViewModel::request_quit() {
     quit_requested_subject_.set(true);
 }
 
+lv_subject_t* BaseViewModel::setting_title_subject(int row) {
+    return setting_title_subjects_[static_cast<size_t>(std::clamp(row, 0, model::BaseModel::kSettingRows - 1))].native();
+}
+
+lv_subject_t* BaseViewModel::setting_value_subject(int row) {
+    return setting_value_subjects_[static_cast<size_t>(std::clamp(row, 0, model::BaseModel::kSettingRows - 1))].native();
+}
+
+int BaseViewModel::tx_drive() const { return model_.tx_drive(); }
+int BaseViewModel::mic_gain() const { return model_.mic_gain(); }
+int BaseViewModel::sidetone_hz() const { return model_.sidetone_hz(); }
+int BaseViewModel::tx_low_cut_hz() const { return model_.tx_low_cut_hz(); }
+void BaseViewModel::set_tx_low_cut_hz(int hz) {
+    model_.set_tx_low_cut_hz(hz);
+    publish_settings();
+}
+
+int BaseViewModel::ptt_key() const { return model_.ptt_key(); }
+void BaseViewModel::set_ptt_key(int key) {
+    model_.set_ptt_key(key);
+    publish_settings();
+}
+
+void BaseViewModel::set_settings(int tx_drive, int mic_gain, int sidetone_hz) {
+    model_.set_settings(tx_drive, mic_gain, sidetone_hz);
+    publish_settings();
+}
+
+void BaseViewModel::set_radio_address(const std::string& address) {
+    if (address == model_.radio_address()) return;
+    model_.set_radio_address(address);
+    publish_settings();
+}
+
+void BaseViewModel::select_setting(int direction) {
+    model_.select_setting(direction);
+    publish_settings();
+}
+
+void BaseViewModel::adjust_setting(int direction) {
+    model_.adjust_setting(direction);
+    publish_settings();
+}
+
+void BaseViewModel::publish_settings() {
+    static constexpr const char* kTitles[model::BaseModel::kSettingRows] = {
+        "TX Drive", "Mic Gain", "Sidetone Pitch", "TX Low Cut", "PTT Key", "Radio IP"};
+    char values[model::BaseModel::kSettingRows][40]{};
+    std::snprintf(values[0], sizeof(values[0]), "%d / 15", model_.tx_drive());
+    std::snprintf(values[1], sizeof(values[1]), "%d%%", model_.mic_gain());
+    std::snprintf(values[2], sizeof(values[2]), "%d Hz", model_.sidetone_hz());
+    std::snprintf(values[3], sizeof(values[3]), "%d Hz", model_.tx_low_cut_hz());
+    std::snprintf(values[4], sizeof(values[4]), "%s", model_.ptt_key() == 1 ? "Space" : "Tab");
+    std::snprintf(values[5], sizeof(values[5]), "%s",
+                  model_.radio_address().empty() ? "searching..." : model_.radio_address().c_str());
+    for (int i = 0; i < model::BaseModel::kSettingRows; ++i) {
+        char title[24]{};
+        std::snprintf(title, sizeof(title), "%s %s", i == model_.selected_setting() ? ">" : " ", kTitles[i]);
+        auto& title_subject = setting_title_subjects_[static_cast<size_t>(i)];
+        if (std::strcmp(title_subject.value(), title) != 0) title_subject.set(title);
+        auto& value_subject = setting_value_subjects_[static_cast<size_t>(i)];
+        if (std::strcmp(value_subject.value(), values[i]) != 0) value_subject.set(values[i]);
+    }
+}
+
 void BaseViewModel::publish_all() {
+    publish_settings();
     title_subject_.set(model_.app_title());
     greeting_subject_.set(model_.greeting());
     radio_mode_subject_.set(model_.radio_mode_name());

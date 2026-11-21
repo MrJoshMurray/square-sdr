@@ -10,6 +10,8 @@
 #include <cctype>
 #include <filesystem>
 #include <fstream>
+#include <string>
+#include <utility>
 #include <vector>
 
 namespace app {
@@ -96,6 +98,21 @@ bool load_application_config(const std::string& path,
                 return false;
             }
         }
+        if (section == "application") {
+            int* target = key == "tx_drive" ? &config.tx_drive
+                        : key == "mic_gain" ? &config.mic_gain
+                        : key == "sidetone_hz" ? &config.sidetone_hz
+                        : key == "tx_low_cut_hz" ? &config.tx_low_cut_hz
+                        : key == "ptt_key" ? &config.ptt_key : nullptr;
+            if (target) {
+                try {
+                    *target = std::stoi(line.substr(separator + 1));
+                } catch (const std::exception&) {
+                    error = "invalid " + key + " value at line " + std::to_string(line_number);
+                    return false;
+                }
+            }
+        }
     }
 
     return true;
@@ -124,43 +141,60 @@ bool save_application_config(const std::string& path,
         lines.push_back(line);
     }
 
+    const std::vector<std::pair<std::string, std::string>> entries = {
+        {"dark_mode", config.dark_mode ? "yes" : "no"},
+        {"tx_drive", std::to_string(config.tx_drive)},
+        {"mic_gain", std::to_string(config.mic_gain)},
+        {"sidetone_hz", std::to_string(config.sidetone_hz)},
+        {"tx_low_cut_hz", std::to_string(config.tx_low_cut_hz)},
+        {"ptt_key", std::to_string(config.ptt_key)},
+    };
+    std::vector<bool> written(entries.size(), false);
+    const auto flush_missing = [&](std::vector<std::string>& out) {
+        for (size_t i = 0; i < entries.size(); ++i) {
+            if (!written[i]) {
+                out.push_back(entries[i].first + "=" + entries[i].second);
+                written[i] = true;
+            }
+        }
+    };
+
     std::vector<std::string> updated;
     bool in_application_section = false;
     bool found_application_section = false;
-    bool wrote_dark_mode = false;
-    const std::string dark_mode_line = config.dark_mode ? "dark_mode=yes" : "dark_mode=no";
 
     for (const auto& current_line : lines) {
         const auto normalized = trim(current_line);
         const bool section_header = normalized.size() >= 2 && normalized.front() == '[' &&
                                     normalized.back() == ']';
         if (section_header) {
-            if (in_application_section && !wrote_dark_mode) {
-                updated.push_back(dark_mode_line);
-                wrote_dark_mode = true;
-            }
+            if (in_application_section) flush_missing(updated);
             in_application_section = is_section(current_line, "application");
             found_application_section = found_application_section || in_application_section;
         }
 
-        if (in_application_section && is_key(current_line, "dark_mode")) {
-            if (!wrote_dark_mode) {
-                updated.push_back(dark_mode_line);
-                wrote_dark_mode = true;
+        bool replaced = false;
+        if (in_application_section) {
+            for (size_t i = 0; i < entries.size(); ++i) {
+                if (is_key(current_line, entries[i].first)) {
+                    if (!written[i]) {
+                        updated.push_back(entries[i].first + "=" + entries[i].second);
+                        written[i] = true;
+                    }
+                    replaced = true;
+                    break;
+                }
             }
-            continue;
         }
-        updated.push_back(current_line);
+        if (!replaced) updated.push_back(current_line);
     }
 
-    if (!wrote_dark_mode) {
-        if (!updated.empty() && !updated.back().empty()) {
-            updated.emplace_back();
-        }
-        if (!found_application_section) {
-            updated.emplace_back("[application]");
-        }
-        updated.push_back(dark_mode_line);
+    if (in_application_section) {
+        flush_missing(updated);
+    } else if (!found_application_section) {
+        if (!updated.empty() && !updated.back().empty()) updated.emplace_back();
+        updated.emplace_back("[application]");
+        flush_missing(updated);
     }
 
     std::ofstream output(path, std::ios::trunc);

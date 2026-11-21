@@ -6,6 +6,8 @@
 
 #include "base_model.h"
 
+#include <cstring>
+
 #include <algorithm>
 #include <array>
 
@@ -13,6 +15,44 @@ namespace model {
 
 const RadioMeasurements& BaseModel::radio_measurements() const {
     return radio_measurements_;
+}
+
+int BaseModel::tx_drive() const { return tx_drive_; }
+int BaseModel::mic_gain() const { return mic_gain_; }
+int BaseModel::sidetone_hz() const { return sidetone_hz_; }
+int BaseModel::tx_low_cut_hz() const { return tx_low_cut_hz_; }
+void BaseModel::set_tx_low_cut_hz(int hz) { tx_low_cut_hz_ = std::clamp(hz, 100, 300); }
+int BaseModel::ptt_key() const { return ptt_key_; }
+void BaseModel::set_ptt_key(int key) { ptt_key_ = key == 1 ? 1 : 0; }
+const std::string& BaseModel::radio_address() const { return radio_address_; }
+int BaseModel::selected_setting() const { return selected_setting_; }
+
+void BaseModel::set_settings(int tx_drive, int mic_gain, int sidetone_hz) {
+    tx_drive_ = std::clamp(tx_drive, 0, 15);
+    mic_gain_ = std::clamp(mic_gain, 0, 100);
+    sidetone_hz_ = std::clamp(sidetone_hz, 400, 1000);
+}
+
+void BaseModel::adjust_rit(int direction) {
+    rit_hz_ = std::clamp(rit_hz_ + (direction < 0 ? -50 : 50), -2000, 2000);
+}
+
+void BaseModel::set_radio_address(const std::string& address) { radio_address_ = address; }
+
+void BaseModel::select_setting(int direction) {
+    selected_setting_ = (selected_setting_ + (direction < 0 ? kSettingRows - 1 : 1)) % kSettingRows;
+}
+
+void BaseModel::adjust_setting(int direction) {
+    const int step = direction < 0 ? -1 : 1;
+    switch (selected_setting_) {
+    case 0: set_settings(tx_drive_ + step, mic_gain_, sidetone_hz_); break;
+    case 1: set_settings(tx_drive_, mic_gain_ + step * 5, sidetone_hz_); break;
+    case 2: set_settings(tx_drive_, mic_gain_, sidetone_hz_ + step * 50); break;
+    case 3: set_tx_low_cut_hz(tx_low_cut_hz_ + step * 50); break;
+    case 4: set_ptt_key(ptt_key_ == 0 ? 1 : 0); break;
+    default: break;
+    }
 }
 
 void BaseModel::set_radio_measurements(const RadioMeasurements& measurements) {
@@ -152,6 +192,10 @@ const char* BaseModel::band_name() const {
         }
     }
     return "RX ONLY";
+}
+
+bool BaseModel::transmit_allowed() const {
+    return std::strcmp(band_name(), "RX ONLY") != 0;
 }
 
 uint64_t BaseModel::frequency_hz() const {

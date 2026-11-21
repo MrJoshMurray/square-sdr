@@ -51,7 +51,10 @@ bool apply_system_volume_action(VolumeAction action, VolumeState& state, std::st
         }
     }
 
-    if (result >= 0 && action == VolumeAction::ToggleMute) {
+    if (result >= 0 && (action == VolumeAction::Mute || action == VolumeAction::Unmute)) {
+        result = snd_mixer_selem_set_playback_switch_all(element, action == VolumeAction::Unmute);
+        state.silent = true;
+    } else if (result >= 0 && action == VolumeAction::ToggleMute) {
         int enabled = 0;
         result = snd_mixer_selem_get_playback_switch(element, SND_MIXER_SCHN_FRONT_LEFT, &enabled);
         if (result >= 0) result = snd_mixer_selem_set_playback_switch_all(element, !enabled);
@@ -120,6 +123,13 @@ SystemVolumeControl::SystemVolumeControl()
     : SystemVolumeControl([state = VolumeState{50, false}](VolumeAction action,
                                                           VolumeState& result,
                                                           std::string&) mutable {
+        result.silent = false;
+        if (action == VolumeAction::Mute || action == VolumeAction::Unmute) {
+            state.muted = action == VolumeAction::Mute;
+            result = state;
+            result.silent = true;
+            return true;
+        }
         if (action == VolumeAction::ToggleMute) state.muted = !state.muted;
         else state.percent = std::clamp(state.percent + (action == VolumeAction::Up ? 5 : -5), 0, 100);
         result = state;
@@ -419,6 +429,41 @@ bool AudioOutput::write(const int16_t* mono_samples, size_t frame_count, std::st
 #else
     error = "Audio output is unavailable in this build";
     return false;
+#endif
+}
+
+void AudioOutput::flush() {
+#if USE_DESKTOP
+    if (desktop_device_id_ != 0) SDL_ClearQueuedAudio(desktop_device_id_);
+#elif SQUARE_SDR_HAS_ALSA
+    if (platform_device_) {
+        auto* pcm = static_cast<snd_pcm_t*>(platform_device_);
+        snd_pcm_drop(pcm);
+        snd_pcm_prepare(pcm);
+    }
+#endif
+}
+
+size_t AudioOutput::queued_frames() const {
+#if USE_DESKTOP
+    if (desktop_device_id_ != 0) return SDL_GetQueuedAudioSize(desktop_device_id_) / (2 * sizeof(int16_t));
+#elif SQUARE_SDR_HAS_ALSA
+    if (platform_device_) {
+        snd_pcm_sframes_t delay = 0;
+        if (snd_pcm_delay(static_cast<snd_pcm_t*>(platform_device_), &delay) == 0 && delay > 0) {
+            return static_cast<size_t>(delay);
+        }
+    }
+#endif
+    return 0;
+}
+
+void AudioOutput::start_now() {
+#if SQUARE_SDR_HAS_ALSA && !USE_DESKTOP
+    if (platform_device_) {
+        auto* pcm = static_cast<snd_pcm_t*>(platform_device_);
+        if (snd_pcm_state(pcm) == SND_PCM_STATE_PREPARED) snd_pcm_start(pcm);
+    }
 #endif
 }
 

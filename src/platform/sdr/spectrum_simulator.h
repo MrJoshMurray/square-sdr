@@ -24,6 +24,8 @@ class LiveSpectrumBuffer {
 public:
 	static void push_iq(const IqSample* samples, size_t sample_count) noexcept;
 	static bool snapshot(SpectrumFrame& frame) noexcept;
+	// While blanked, snapshots return an empty spectrum and drop the smoothing history.
+	static void set_blanked(bool blanked) noexcept;
 };
 
 } // namespace platform::sdr

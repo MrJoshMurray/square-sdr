@@ -765,6 +765,24 @@ if(BUILD_TESTING AND USE_DESKTOP)
     )
     add_test(NAME ${PROJECT_NAME}_stream_tests COMMAND ${PROJECT_NAME}_stream_tests)
 
+    add_executable(${PROJECT_NAME}_voice_modulator_tests
+        tests/voice_modulator_tests.cpp
+    )
+    target_link_libraries(${PROJECT_NAME}_voice_modulator_tests
+        PRIVATE
+            ${PROJECT_NAME}_platform
+    )
+    add_test(NAME ${PROJECT_NAME}_voice_modulator_tests COMMAND ${PROJECT_NAME}_voice_modulator_tests)
+
+    add_executable(${PROJECT_NAME}_auto_notch_tests
+        tests/auto_notch_tests.cpp
+    )
+    target_link_libraries(${PROJECT_NAME}_auto_notch_tests
+        PRIVATE
+            ${PROJECT_NAME}_platform
+    )
+    add_test(NAME ${PROJECT_NAME}_auto_notch_tests COMMAND ${PROJECT_NAME}_auto_notch_tests)
+
     add_executable(${PROJECT_NAME}_stream_probe
         tools/sdr_stream_probe.cpp
     )

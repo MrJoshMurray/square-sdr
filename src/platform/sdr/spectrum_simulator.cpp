@@ -7,6 +7,7 @@
 #include "spectrum_simulator.h"
 
 #include <algorithm>
+#include <atomic>
 #include <cstdlib>
 #include <cmath>
 #include <mutex>
@@ -15,6 +16,7 @@ namespace platform::sdr {
 namespace {
 
 std::mutex live_spectrum_mutex;
+std::atomic<bool> live_spectrum_blanked{false};
 SpectrumFrame live_spectrum_frame{};
 std::array<float, kSpectrumBinCount> live_spectrum_power{};
 constexpr size_t kLiveSpectrumSamples = 1024;
@@ -75,7 +77,17 @@ void LiveSpectrumBuffer::push_iq(const IqSample* samples, size_t sample_count) n
     }
 }
 
+void LiveSpectrumBuffer::set_blanked(bool blanked) noexcept {
+    live_spectrum_blanked.store(blanked);
+}
+
 bool LiveSpectrumBuffer::snapshot(SpectrumFrame& frame) noexcept {
+    if (live_spectrum_blanked.load()) {
+        live_spectrum_power.fill(0.0f);
+        live_spectrum_frame = {};
+        frame = live_spectrum_frame;
+        return true;
+    }
     std::array<IqSample, kLiveSpectrumSamples> samples{};
     {
         std::lock_guard<std::mutex> lock(live_spectrum_mutex);
