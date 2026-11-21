@@ -4,20 +4,20 @@
   "version": "0.3.0",
   "description": "OpenHPSDR client with voice and CW transmit for Square SDR 2 on Cardputer Zero.",
   "store": {
-    "summary": "A pocket-sized amateur-radio transceiver controller for Square SDR 2.",
-    "description": "Put a real amateur-radio station in your pocket. Square SDR turns Cardputer Zero into a compact controller for the Square SDR 2 from Wide Servis, with live IQ reception, USB/LSB/AM/CW, a moving panadapter and waterfall, LED-style S meter, auto notch and RIT. Hold Tab or Space to transmit voice (built-in or USB microphone) or CW, with a mic level meter, adjustable drive, mic gain and low cut. Transmit is limited to UK amateur allocations, drops after 3 minutes or on retune, and has SWR protection. Tune 0 to 30 MHz. Direct Ethernet to the radio is the only tested connection; always test transmit on a dummy load and only transmit if you hold the appropriate licence.",
+    "summary": "Tune, listen and transmit with a Square SDR 2 or Hermes-Lite 2 radio.",
+    "description": "Square SDR turns your Cardputer Zero into a pocket controller for a Square SDR 2 (or other Hermes-Lite 2 style) radio. You'll need the radio, connected to the Cardputer by Ethernet, as this app doesn't pick up signals on its own.\n\nListen from 0 to 30 MHz in USB, LSB, AM or CW, with a live spectrum and waterfall, an S meter, an auto notch to zap whistles, and RIT to nudge the receive pitch. Hold Tab or Space to talk (built-in or USB mic) or send CW. Press H any time for a key guide.\n\nTransmit is kept to UK amateur bands, cuts out after 3 minutes or if you retune, and backs off on high SWR. Please test on a dummy load first, and only transmit if you hold an amateur licence.",
     "locales": {
       "ja": {
-        "summary": "Square SDR 2 用の送受信対応 SDR 操作アプリ。",
-        "description": "Cardputer Zero から Ethernet 経由で Square SDR 2 を操作します。ライブ受信、USB/LSB/AM/CW、パナアダプター、Sメーター、オートノッチ、RIT、音声/CW送信に対応します。送信は英国のアマチュア割り当て内に制限され、ダミーロードでの試験を推奨します。"
+        "summary": "Square SDR 2 / Hermes-Lite 2 系の無線機を操作するアプリ。",
+        "description": "Cardputer Zero から Ethernet 経由で無線機を操作します。使用には Square SDR 2 などの Hermes-Lite 2 系無線機が必要です。ライブ受信、USB/LSB/AM/CW、スペクトラムとウォーターフォール、Sメーター、オートノッチ、RIT、音声/CW送信に対応。送信は英国のアマチュア帯に制限されます。ダミーロードで試験し、免許をお持ちの場合のみ送信してください。"
       },
       "zh-CN": {
-        "summary": "用于 Square SDR 2 的收发 SDR 控制应用。",
-        "description": "通过以太网在 Cardputer Zero 上控制 Square SDR 2。支持实时接收、USB/LSB/AM/CW、频谱瀑布图、S 表、自动陷波、RIT 以及语音/CW 发射。发射仅限英国业余频段，建议先使用假负载测试。"
+        "summary": "用于 Square SDR 2 / Hermes-Lite 2 电台的控制应用。",
+        "description": "通过以太网在 Cardputer Zero 上控制电台。需要 Square SDR 2 或其他 Hermes-Lite 2 类电台。支持实时接收、USB/LSB/AM/CW、频谱瀑布图、S 表、自动陷波、RIT 以及语音/CW 发射。发射仅限英国业余频段；请先用假负载测试，并仅在持有业余执照时发射。"
       },
       "es": {
-        "summary": "Controlador SDR de recepción y transmisión para Square SDR 2.",
-        "description": "Controla un Square SDR 2 por Ethernet desde Cardputer Zero. Recepción en directo, USB/LSB/AM/CW, panadapter y cascada, S-meter, filtro notch automático, RIT y transmisión de voz/CW. La transmisión se limita a las bandas de aficionado del Reino Unido; prueba primero con una carga ficticia."
+        "summary": "Controla una radio Square SDR 2 / Hermes-Lite 2 desde tu Cardputer.",
+        "description": "Controla tu radio por Ethernet desde Cardputer Zero. Necesitas un Square SDR 2 u otra radio tipo Hermes-Lite 2. Recepción en directo, USB/LSB/AM/CW, espectro y cascada, S-meter, notch automático, RIT y transmisión de voz/CW. La transmisión se limita a las bandas de aficionado del Reino Unido; prueba antes con una carga ficticia y transmite solo con licencia."
       }
     },
     "categories": [
