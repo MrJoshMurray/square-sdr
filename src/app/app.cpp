@@ -103,6 +103,10 @@ public:
         output_.close();
     }
 
+    void request_band_edge_tone() {
+        output_.request_band_edge_tone();
+    }
+
 private:
     void run() {
         constexpr size_t kFramesPerWrite = 960;
@@ -151,6 +155,10 @@ public:
 
     void set_frequency(uint64_t frequency_hz) {
         frequency_hz_.store(frequency_hz);
+    }
+
+    void request_band_edge_tone() {
+        output_.request_band_edge_tone();
     }
 
     void set_receive_settings(model::RadioMode mode, uint32_t bandwidth_hz) {
@@ -391,7 +399,17 @@ public:
         platform::clear_global_key_listener(global_key_listener, this);
     }
 
+    void set_band_edge_handler(std::function<void()> handler) {
+        band_edge_handler_ = std::move(handler);
+    }
+
 private:
+    void tune(int direction) {
+        if (view_model_.tune_frequency(direction) && band_edge_handler_) {
+            band_edge_handler_();
+        }
+    }
+
     static void volume_error_timer_cb(lv_timer_t* timer) {
         auto* controller = static_cast<ShortcutController*>(lv_timer_get_user_data(timer));
         if (!controller) return;
@@ -426,7 +444,7 @@ private:
         const bool left = controller->tune_repeat_key_ == LV_KEY_LEFT
                        || controller->tune_repeat_key_ == 'z'
                        || controller->tune_repeat_key_ == 'Z';
-        controller->view_model_.tune_frequency(left ? -1 : 1);
+        controller->tune(left ? -1 : 1);
     }
 
     void start_tune_repeat(uint32_t key) {
@@ -521,7 +539,7 @@ private:
 
             if (page == model::AppPage::Apple) {
                 if (left || right) {
-                    view_model_.tune_frequency(left ? -1 : 1);
+                    tune(left ? -1 : 1);
                     start_tune_repeat(key);
                     return true;
                 }
@@ -619,6 +637,7 @@ private:
     }
 
     viewmodel::BaseViewModel& view_model_;
+    std::function<void()> band_edge_handler_;
     std::unique_ptr<view::widgets::Toast> toast_;
     std::unique_ptr<view::widgets::HelpPopup> help_popup_;
     std::unique_ptr<view::widgets::VolumeOverlay> volume_overlay_;
@@ -757,6 +776,11 @@ int Application::run() {
             LOG_WARN("simulated audio output unavailable: {}", audio_error);
         }
     }
+
+    shortcuts.set_band_edge_handler([&] {
+        if (radio_audio) radio_audio->request_band_edge_tone();
+        if (simulated_audio) simulated_audio->request_band_edge_tone();
+    });
 
     LOG_INFO("LVGL app started at {}x{}", lv_display_get_horizontal_resolution(display),
              lv_display_get_vertical_resolution(display));

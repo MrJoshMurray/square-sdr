@@ -7,6 +7,7 @@
 #include "audio_output.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cstdlib>
 #include <set>
 #include <utility>
@@ -248,6 +249,35 @@ AudioOutput::~AudioOutput() {
     close();
 }
 
+void BandEdgeTone::request() {
+    requested_.store(true);
+}
+
+int16_t BandEdgeTone::next_sample(int16_t input, uint32_t sample_rate) {
+    if (requested_.exchange(false)) {
+        position_ = 0;
+        length_ = sample_rate * 80 / 1000;
+    }
+    if (position_ >= length_ || sample_rate == 0) return input;
+    constexpr float kPi = 3.14159265358979323846f;
+    const uint32_t ramp = std::max<uint32_t>(1, sample_rate / 200);
+    const float envelope = std::min({1.0f, static_cast<float>(position_) / ramp,
+                                     static_cast<float>(length_ - position_) / ramp});
+    const float phase = 2.0f * kPi * 880.0f * static_cast<float>(position_) / sample_rate;
+    ++position_;
+    return static_cast<int16_t>(std::lrint(std::sin(phase) * envelope * 655.0f));
+}
+
+void BandEdgeTone::reset() {
+    requested_.store(false);
+    position_ = 0;
+    length_ = 0;
+}
+
+void AudioOutput::request_band_edge_tone() {
+    if (accepting_tones_.load()) band_edge_tone_.request();
+}
+
 bool AudioOutput::open(const std::string& device_id, uint32_t sample_rate, std::string& error) {
     close();
     error.clear();
@@ -284,6 +314,7 @@ bool AudioOutput::open(const std::string& device_id, uint32_t sample_rate, std::
     sample_rate_ = sample_rate;
     stereo_buffer_.reserve(kMaxFramesPerWrite * 2);
     SDL_PauseAudioDevice(device, 0);
+    accepting_tones_.store(true);
     return true;
 #elif SQUARE_SDR_HAS_ALSA
     snd_pcm_t* pcm = nullptr;
@@ -310,6 +341,7 @@ bool AudioOutput::open(const std::string& device_id, uint32_t sample_rate, std::
     platform_device_ = pcm;
     sample_rate_ = sample_rate;
     stereo_buffer_.reserve(kMaxFramesPerWrite * 2);
+    accepting_tones_.store(true);
     return true;
 #else
     (void)device_id;
@@ -338,8 +370,9 @@ bool AudioOutput::write(const int16_t* mono_samples, size_t frame_count, std::st
 
     stereo_buffer_.resize(frame_count * 2);
     for (size_t frame = 0; frame < frame_count; ++frame) {
-        stereo_buffer_[frame * 2] = mono_samples[frame];
-        stereo_buffer_[frame * 2 + 1] = mono_samples[frame];
+        const int16_t sample = band_edge_tone_.next_sample(mono_samples[frame], sample_rate_);
+        stereo_buffer_[frame * 2] = sample;
+        stereo_buffer_[frame * 2 + 1] = sample;
     }
 
 #if USE_DESKTOP
@@ -390,6 +423,8 @@ bool AudioOutput::write(const int16_t* mono_samples, size_t frame_count, std::st
 }
 
 void AudioOutput::close() {
+    accepting_tones_.store(false);
+    band_edge_tone_.reset();
 #if USE_DESKTOP
     if (desktop_device_id_ != 0) {
         SDL_ClearQueuedAudio(desktop_device_id_);

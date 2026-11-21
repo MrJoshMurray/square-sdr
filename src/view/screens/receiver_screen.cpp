@@ -92,7 +92,7 @@ void ReceiverScreen::build_content(lv_obj_t* content) {
     lv_label_bind_text(band_mode, view_model().band_mode_subject(), nullptr);
     lv_obj_set_size(band_mode, 80, LV_SIZE_CONTENT);
     lv_obj_set_pos(band_mode, 16, 0);
-    set_label_font(band_mode, assets(), 12);
+    set_label_font(band_mode, assets(), 10);
     reactive::bind_theme(band_mode, view_model().dark_mode_subject(), reactive::ThemeRole::Text);
     auto* signal_level = lv_label_create(content);
     lv_label_bind_text(signal_level, view_model().signal_level_subject(), nullptr);

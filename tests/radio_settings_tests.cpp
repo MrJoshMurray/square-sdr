@@ -25,11 +25,50 @@ int main() {
     for (int step = 0; step < 1000; ++step) {
         model.tune_frequency(1);
     }
-    assert(model.frequency_hz() == 14350000);
+    assert(model.frequency_hz() == 14700100);
     for (int step = 0; step < 1000; ++step) {
         model.tune_frequency(-1);
     }
-    assert(model.frequency_hz() == 14000000);
+    assert(model.frequency_hz() == 14200100);
+    for (int step = 0; step < 1000; ++step) {
+        model.tune_frequency(-1);
+    }
+    assert(model.frequency_hz() == 13700100);
+    assert(std::string(model.band_name()) == "RX ONLY");
+
+    model::BaseModel edge;
+    edge.cycle_tuning_step(1);
+    edge.cycle_tuning_step(1);
+    edge.cycle_tuning_step(1);
+    edge.cycle_tuning_step(1);
+    for (int step = 0; step < 29; ++step) assert(!edge.tune_frequency(1));
+    assert(edge.tune_frequency(1));
+    assert(edge.frequency_hz() == 14350000);
+    assert(!edge.tune_frequency(1));
+    assert(std::string(edge.band_name()) == "RX ONLY");
+    assert(edge.tune_frequency(-1));
+    assert(std::string(edge.band_name()) == "20m");
+
+    model::BaseModel sixty;
+    sixty.cycle_band(-1);
+    sixty.cycle_band(-1);
+    sixty.cycle_band(-1);
+    for (int step = 0; step < 4; ++step) sixty.cycle_tuning_step(1);
+    assert(std::string(sixty.band_name()) == "60m");
+    assert(sixty.tune_frequency(-1));
+    assert(sixty.frequency_hz() == 5350000);
+    assert(std::string(sixty.band_name()) == "RX ONLY");
+    assert(sixty.tune_frequency(1));
+    assert(std::string(sixty.band_name()) == "60m");
+
+    model::BaseModel limits;
+    for (int step = 0; step < 4; ++step) limits.cycle_tuning_step(1);
+    for (int step = 0; step < 6000; ++step) limits.tune_frequency(-1);
+    assert(limits.frequency_hz() == 0);
+    assert(!limits.tune_frequency(-1));
+    for (int step = 0; step < 7000; ++step) limits.tune_frequency(1);
+    assert(limits.frequency_hz() == 30000000);
+    assert(!limits.tune_frequency(1));
 
     model::BaseModel band_defaults;
     constexpr std::array<model::RadioMode, 10> expected_modes = {
@@ -58,7 +97,7 @@ int main() {
     model.cycle_band(-1);
     model.cycle_band(-1);
     assert(std::string(model.band_name()) == "60m");
-    assert(model.frequency_hz() == 5350000);
+    assert(model.frequency_hz() == 5355000);
     model.cycle_band(1);
     model.cycle_band(1);
     model.cycle_band(1);

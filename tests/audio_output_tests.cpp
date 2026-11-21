@@ -15,6 +15,18 @@
 #include <vector>
 
 int main() {
+    platform::audio::BandEdgeTone tone;
+    assert(tone.next_sample(123, 48000) == 123);
+    tone.request();
+    bool audible = false;
+    for (int frame = 0; frame < 3840; ++frame) {
+        const auto sample = tone.next_sample(123, 48000);
+        assert(sample >= -655 && sample <= 655);
+        audible = audible || sample != 0;
+    }
+    assert(audible);
+    assert(tone.next_sample(123, 48000) == 123);
+
     std::promise<void> completed;
     auto finished = completed.get_future();
     std::promise<void> release_handler;

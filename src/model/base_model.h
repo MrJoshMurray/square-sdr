@@ -70,7 +70,7 @@ public:
     void toggle_page();
     RadioMode radio_mode() const;
     void cycle_radio_mode(int direction);
-    void tune_frequency(int direction);
+    bool tune_frequency(int direction);
     void cycle_band(int direction);
     void cycle_tuning_step(int direction);
     void cycle_filter_bandwidth(int direction);

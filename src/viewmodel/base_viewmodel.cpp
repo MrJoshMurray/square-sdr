@@ -255,9 +255,10 @@ void BaseViewModel::select_previous_radio_mode() {
     publish_all();
 }
 
-void BaseViewModel::tune_frequency(int direction) {
-    model_.tune_frequency(direction);
+bool BaseViewModel::tune_frequency(int direction) {
+    const bool crossed_edge = model_.tune_frequency(direction);
     publish_all();
+    return crossed_edge;
 }
 
 void BaseViewModel::cycle_band(int direction) {

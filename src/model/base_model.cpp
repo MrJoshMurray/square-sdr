@@ -30,7 +30,7 @@ struct BandPlanEntry {
 constexpr std::array<BandPlanEntry, 10> kUkHfBands = {{
     {"160m", 1810000, 2000000, 1900000},
     {"80m", 3500000, 3800000, 3700000},
-    {"60m", 5258500, 5406500, 5350000},
+    {"60m", 5258500, 5406500, 5355000},
     {"40m", 7000000, 7200000, 7100000},
     {"30m", 10100000, 10150000, 10125000},
     {"20m", 14000000, 14350000, 14200000},
@@ -38,6 +38,25 @@ constexpr std::array<BandPlanEntry, 10> kUkHfBands = {{
     {"15m", 21000000, 21450000, 21200000},
     {"12m", 24890000, 24990000, 24940000},
     {"10m", 28000000, 29700000, 28500000},
+}};
+
+constexpr std::array<BandPlanEntry, 22> kUkAllocations = {{
+    {"2200m", 135700, 137800, 0},
+    {"630m", 472000, 479000, 0},
+    kUkHfBands[0], kUkHfBands[1],
+    {"60m", 5258500, 5264000, 0},
+    {"60m", 5276000, 5284000, 0},
+    {"60m", 5288500, 5292000, 0},
+    {"60m", 5298000, 5307000, 0},
+    {"60m", 5313000, 5323000, 0},
+    {"60m", 5333000, 5338000, 0},
+    {"60m", 5354000, 5358000, 0},
+    {"60m", 5362000, 5374500, 0},
+    {"60m", 5378000, 5382000, 0},
+    {"60m", 5395000, 5401500, 0},
+    {"60m", 5403500, 5406500, 0},
+    kUkHfBands[3], kUkHfBands[4], kUkHfBands[5], kUkHfBands[6],
+    kUkHfBands[7], kUkHfBands[8], kUkHfBands[9],
 }};
 
 constexpr std::array<RadioMode, 10> kDefaultBandModes = {
@@ -127,7 +146,12 @@ const char* BaseModel::radio_mode_description() const {
 }
 
 const char* BaseModel::band_name() const {
-    return kUkHfBands[band_index_].name;
+    for (const auto& band : kUkAllocations) {
+        if (frequency_hz_ >= band.low_hz && frequency_hz_ <= band.high_hz) {
+            return band.name;
+        }
+    }
+    return "RX ONLY";
 }
 
 uint64_t BaseModel::frequency_hz() const {
@@ -182,20 +206,28 @@ void BaseModel::cycle_radio_mode(int direction) {
     filter_bandwidth_hz_ = default_bandwidth_hz(radio_mode_);
 }
 
-void BaseModel::tune_frequency(int direction) {
+bool BaseModel::tune_frequency(int direction) {
     if (direction == 0) {
-        return;
+        return false;
     }
-    const auto& band = kUkHfBands[band_index_];
+    const uint64_t previous_hz = frequency_hz_;
     if (direction < 0) {
         frequency_hz_ = frequency_hz_ > tuning_step_hz()
                       ? frequency_hz_ - tuning_step_hz()
-                      : band.low_hz;
+                      : 0;
     }
     else {
-        frequency_hz_ += tuning_step_hz();
+        frequency_hz_ = std::min<uint64_t>(frequency_hz_ + tuning_step_hz(), 30000000);
     }
-    frequency_hz_ = std::clamp(frequency_hz_, band.low_hz, band.high_hz);
+    for (const auto& band : kUkAllocations) {
+        for (const auto edge : {band.low_hz, band.high_hz}) {
+            if ((previous_hz < edge && frequency_hz_ >= edge)
+                || (previous_hz > edge && frequency_hz_ <= edge)) {
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 void BaseModel::cycle_band(int direction) {

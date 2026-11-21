@@ -139,6 +139,9 @@ int main() {
         measurements.pa_current_amps = 1.0f;
         view_model.set_radio_measurements(measurements);
         assert(std::strcmp(lv_subject_get_string(view_model.radio_pa_subject()), "PA 25.0C  1.00A") == 0);
+        for (int step = 0; step < 4; ++step) view_model.cycle_tuning_step(1);
+        for (int step = 0; step < 31; ++step) view_model.tune_frequency(1);
+        assert(std::strcmp(lv_subject_get_string(view_model.band_mode_subject()), "RX ONLY USB") == 0);
         auto* previous_screen = lv_screen_active();
         for (const bool dark : {false, true}) {
             view_model.set_dark_mode(dark);

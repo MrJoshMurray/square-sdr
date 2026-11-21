@@ -7,6 +7,15 @@ top-to-bottom waterfall. Host-controlled TX, PTT, MOX, and microphone capture
 are deliberately disabled. A physical radio PTT may key the radio independently
 of this application.
 
+Tuning covers 0-30 MHz continuously. Crossing a UK amateur allocation edge
+produces a short tone through the active receive audio output; tuning continues
+past the edge. Outside the listed UK allocations the receiver displays `RX ONLY`.
+The 5 MHz edges follow the individual UK segments, and the band display and
+alerts are not a determination of operating privileges or transmit legality.
+The tone is unavailable when receive audio is not running or is muted. Reception
+outside the radio's intended HF range and filter coverage is not guaranteed.
+See the [RSGB 5 MHz allocation guide](https://rsgb.org/main/operating/band-plans/hf/5mhz/).
+
 The desktop simulator supports deterministic offline spectrum testing and live
 radio testing. Device builds use ALSA for audio and are tuned for the Cardputer
 Zero's limited CPU and memory: the live analyzer caches window coefficients,
@@ -104,6 +113,8 @@ In this example project, we used small MVVM-style structure around LVGL:
 The receive path has been tested with a Square SDR 2 and a Cardputer Zero using
 a real antenna. A clearly audible 40 m LSB signal from Bulgaria was received in
 the UK. Both 3.5 mm headphones and a USB headset produced working receive audio.
+AM broadcast reception above the 40 m band and the 7.2 MHz band-edge tone have
+also been confirmed on the device.
 Tuning direction and live waterfall movement have also been checked on hardware.
 The S-meter and waterfall gain are provisional display calibrations and still
 need testing against weaker signals such as FT8.
@@ -450,7 +461,7 @@ Create the local release package:
 cmake --build --preset cp0-cross-rel --target package
 ```
 
-The package is written to `dist/Square SDR_0.2.1_rev1_arm64.deb`. The `cp0-cross`
+The package is written to `dist/Square SDR_0.2.1_rev2_arm64.deb`. The `cp0-cross`
 preset sets `APP_LOG_LEVEL=APP_LOG_LEVEL_WARN` to avoid expensive debug logging
 on the device.
 
@@ -465,7 +476,7 @@ By default, the debian package is copied to '$HOME' folder, normally it's under 
 On your device, install the copied package with `apt` and replace the package file name with the one you copied:
 
 ```shell
-sudo apt install --no-install-recommends "./Square SDR_0.2.1_rev1_arm64.deb"
+sudo apt install --no-install-recommends "./Square SDR_0.2.1_rev2_arm64.deb"
 ```
 
 ### Hardware Test
@@ -575,7 +586,7 @@ Debian packages are produced with CPack and written to `dist/`. The package file
 Default example:
 
 ```text
-dist/Square SDR_0.2.1_rev1_arm64.deb
+dist/Square SDR_0.2.1_rev2_arm64.deb
 ```
 
 Package layout:
@@ -604,10 +615,11 @@ Or run the full configure, release build, and package flow with one workflow pre
 cmake --workflow --preset cp0-cross-package
 ```
 
-### Latest GitHub Test Package
+### Earlier GitHub Test Package
 
-The current ARM64 test package is available as a GitHub prerelease. It is not a
-Cardputer Store release. Download and verify it on the Cardputer with:
+The earlier `0.2.1-rev1` ARM64 test package is available as a GitHub prerelease.
+It does not include the continuous tuning and band-edge alerts described above.
+It is not a Cardputer Store release. Download and verify it on the Cardputer with:
 
 ```shell
 curl -fL \

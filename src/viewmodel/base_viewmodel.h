@@ -57,7 +57,7 @@ public:
     void toggle_page();
     void select_next_radio_mode();
     void select_previous_radio_mode();
-    void tune_frequency(int direction);
+    bool tune_frequency(int direction);
     void cycle_band(int direction);
     void cycle_tuning_step(int direction);
     void cycle_filter_bandwidth(int direction);

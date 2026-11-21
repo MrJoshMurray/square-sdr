@@ -8,6 +8,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <atomic>
 #include <condition_variable>
 #include <deque>
 #include <functional>
@@ -72,6 +73,18 @@ public:
     virtual bool write(const int16_t* mono_samples, size_t frame_count, std::string& error) = 0;
 };
 
+class BandEdgeTone {
+public:
+    void request();
+    int16_t next_sample(int16_t input, uint32_t sample_rate);
+    void reset();
+
+private:
+    std::atomic<bool> requested_{false};
+    uint32_t position_{0};
+    uint32_t length_{0};
+};
+
 class AudioOutput final : public MonoAudioSink {
 public:
     AudioOutput() = default;
@@ -82,6 +95,7 @@ public:
 
     bool open(const std::string& device_id, uint32_t sample_rate, std::string& error);
     bool write(const int16_t* mono_samples, size_t frame_count, std::string& error) override;
+    void request_band_edge_tone();
     void close();
     bool is_open() const;
 
@@ -90,6 +104,8 @@ private:
     uint32_t desktop_device_id_{0};
     void* platform_device_{nullptr};
     std::vector<int16_t> stereo_buffer_;
+    std::atomic<bool> accepting_tones_{false};
+    BandEdgeTone band_edge_tone_;
 };
 
 } // namespace platform::audio

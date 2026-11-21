@@ -7,7 +7,7 @@
 include(GNUInstallDirs)
 
 set(APP_DISPLAY_NAME "Square SDR" CACHE STRING "Human-readable application name used by launchers and package filename")
-set(APP_DEBIAN_REVISION "rev1" CACHE STRING "Debian package revision/vendor suffix")
+set(APP_DEBIAN_REVISION "rev2" CACHE STRING "Debian package revision/vendor suffix")
 set(APP_DEBIAN_ARCHITECTURE "arm64" CACHE STRING "Debian package architecture")
 set(APP_MAINTAINER "Josh Murray <josh@tigerstyle.co.uk>" CACHE STRING "Debian package maintainer")
 set(APP_PACKAGE_DESCRIPTION "Square SDR application for Cardputer Zero" CACHE STRING "Debian package summary")
