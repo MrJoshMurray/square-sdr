@@ -159,7 +159,7 @@ void test_am_bandwidth() {
 void test_sideband_selection() {
     std::vector<platform::sdr::IqSample> iq(kSampleCount);
     std::vector<float> audio(kSampleCount);
-    auto modulator = ampmodem_create(0.5f, LIQUID_AMPMODEM_USB, 1);
+    auto modulator = ampmodem_create(0.5f, LIQUID_AMPMODEM_LSB, 1);
     assert(modulator);
     for (size_t index = 0; index < iq.size(); ++index) {
         liquid_float_complex signal{};
@@ -181,7 +181,7 @@ void test_sideband_selection() {
     assert(selected > 0.03f);
     assert(tone_amplitude(audio, 1000.0f) < selected * 0.1f);
 
-    modulator = ampmodem_create(0.5f, LIQUID_AMPMODEM_USB, 1);
+    modulator = ampmodem_create(0.5f, LIQUID_AMPMODEM_LSB, 1);
     assert(modulator);
     for (size_t index = 0; index < iq.size(); ++index) {
         liquid_float_complex signal{};
@@ -243,17 +243,17 @@ void test_signal_level() {
         assert(demodulator.process(iq.data(), iq.size(), audio.data(), audio.size(), error));
         return *demodulator.signal_level_dbfs();
     };
-    const float in_band = measure_tone(1400.0f);
+    const float in_band = measure_tone(-1400.0f);
     assert(in_band > -22.0f && in_band < -18.0f);
     assert(measure_tone(6000.0f) < in_band - 30.0f);
     assert(measure_tone(-6000.0f) < in_band - 30.0f);
-    assert(measure_tone(-1400.0f) < in_band - 20.0f);
+    assert(measure_tone(1400.0f) < in_band - 20.0f);
     demodulator.reset();
     assert(!demodulator.signal_level_dbfs());
     settings.mode = platform::sdr::DemodMode::Lsb;
     assert(demodulator.configure(settings, error));
-    assert(measure_tone(-1400.0f) > -22.0f);
-    assert(measure_tone(1400.0f) < -40.0f);
+    assert(measure_tone(1400.0f) > -22.0f);
+    assert(measure_tone(-1400.0f) < -40.0f);
     settings.mode = platform::sdr::DemodMode::Am;
     assert(demodulator.configure(settings, error));
     assert(measure_tone(0.0f) > -22.0f);
@@ -262,8 +262,8 @@ void test_signal_level() {
 } // namespace
 
 int main() {
-    test_am_ssb_mode(platform::sdr::DemodMode::Usb, LIQUID_AMPMODEM_USB, 1);
-    test_am_ssb_mode(platform::sdr::DemodMode::Lsb, LIQUID_AMPMODEM_LSB, 1);
+    test_am_ssb_mode(platform::sdr::DemodMode::Usb, LIQUID_AMPMODEM_LSB, 1);
+    test_am_ssb_mode(platform::sdr::DemodMode::Lsb, LIQUID_AMPMODEM_USB, 1);
     test_am_ssb_mode(platform::sdr::DemodMode::Am, LIQUID_AMPMODEM_DSB, 0);
     test_cw_mode();
     test_am_bandwidth();

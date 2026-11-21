@@ -18,6 +18,7 @@ std::mutex live_spectrum_mutex;
 SpectrumFrame live_spectrum_frame{};
 std::array<float, kSpectrumBinCount> live_spectrum_power{};
 constexpr size_t kLiveSpectrumSamples = 1024;
+constexpr float kSpectrumDisplayOffsetDb = 157.0f;
 std::array<IqSample, kLiveSpectrumSamples> live_iq_buffer{};
 size_t live_iq_count = 0;
 size_t live_iq_write_index = 0;
@@ -134,7 +135,9 @@ bool LiveSpectrumBuffer::snapshot(SpectrumFrame& frame) noexcept {
     for (size_t bin = 0; bin < next.size(); ++bin) {
         live_spectrum_power[bin] = live_spectrum_power[bin] * 0.85f + power[bin] * 0.15f;
         const float decibels = 10.0f * std::log10(std::max(live_spectrum_power[bin], 1.0e-16f));
-        const float scaled = std::clamp((decibels + 145.0f) * 3.0f, 0.0f, 255.0f);
+        const float scaled = std::clamp((decibels + kSpectrumDisplayOffsetDb) * 3.0f,
+                        0.0f,
+                        255.0f);
         next[bin] = static_cast<uint8_t>(scaled);
     }
     live_spectrum_frame = next;

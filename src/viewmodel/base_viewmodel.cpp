@@ -17,6 +17,8 @@ int page_to_int(model::AppPage page) {
     return static_cast<int>(page);
 }
 
+constexpr int kS9ReferenceDbfs = -80;
+
 void format_frequency(uint64_t frequency_hz, char* output, size_t output_size) {
     std::snprintf(output,
                   output_size,
@@ -169,7 +171,7 @@ void BaseViewModel::set_radio_measurements(const model::RadioMeasurements& measu
     const auto& current = model_.radio_measurements();
     char text[64]{};
     if (current.signal_level_dbfs) {
-        const int above_s9 = *current.signal_level_dbfs + 56;
+        const int above_s9 = *current.signal_level_dbfs - kS9ReferenceDbfs;
         if (above_s9 > 0) {
             std::snprintf(text, sizeof(text), "~S9+%d dB", above_s9);
         } else {

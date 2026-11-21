@@ -88,7 +88,7 @@ int main() {
     assert(!pipeline.signal_level_dbfs().has_value());
     const auto selected_settings = platform::sdr::make_demodulator_settings(model);
 
-    auto modulator = ampmodem_create(0.5f, LIQUID_AMPMODEM_USB, 1);
+    auto modulator = ampmodem_create(0.5f, LIQUID_AMPMODEM_LSB, 1);
     assert(modulator != nullptr);
     std::array<uint8_t, kPacketSize> packet{};
     uint32_t sample_index = 0;

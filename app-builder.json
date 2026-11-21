@@ -21,7 +21,7 @@
         "description": "Sintoniza y supervisa un Square SDR 2 por Ethernet desde Cardputer Zero. Incluye recepción IQ en directo, demodulación USB/LSB/AM/CW, panadapter y cascada, audio de recepción, telemetría aproximada de señal y PA, y estado de descubrimiento. La transmisión, PTT, MOX y la captura de micrófono están desactivados."
       }
     },
-    "categories": ["Utility"],
+    "categories": ["Radio & Comms"],
     "screenshots": [
       "screenshot/square-sdr-receiver.png",
       "screenshot/square-sdr-settings.png",
@@ -31,7 +31,7 @@
     "icon": "assets/images/square-sdr.png",
     "license": "MIT",
     "source_repo": "https://github.com/MrJoshMurray/square-sdr",
-    "author": { "github": "MrJoshMurray", "display_name": "Josh Murray" },
+    "author": { "github": "MrJoshMurray", "display_name": "MrJoshua" },
     "share_code": "SQSD",
     "permissions": {
       "camera": false,

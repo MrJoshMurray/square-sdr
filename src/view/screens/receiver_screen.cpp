@@ -260,7 +260,8 @@ void ReceiverScreen::update_spectrum() {
 
     int32_t previous_y = kSpectrumHeight - 1;
     for (int32_t x = 0; x < kCanvasWidth; ++x) {
-        const auto bin = static_cast<size_t>(x) * frame.size() / kCanvasWidth;
+        const auto display_bin = static_cast<size_t>(x) * frame.size() / kCanvasWidth;
+        const auto bin = frame.size() - 1 - display_bin;
         const auto level = frame[bin];
         const auto trace_y = kSpectrumHeight - 1
                            - (static_cast<uint16_t>(level) * (kSpectrumHeight - 2)) / 255;

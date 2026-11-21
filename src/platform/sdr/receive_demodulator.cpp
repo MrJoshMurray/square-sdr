@@ -98,12 +98,12 @@ bool ReceiveDemodulator::configure(const DemodulatorSettings& settings, std::str
     switch (settings.mode) {
     case DemodMode::Usb:
         next->amplitude_demodulator = ampmodem_create(kAmModulationIndex,
-                                                      LIQUID_AMPMODEM_USB,
+                                                      LIQUID_AMPMODEM_LSB,
                                                       1);
         break;
     case DemodMode::Lsb:
         next->amplitude_demodulator = ampmodem_create(kAmModulationIndex,
-                                                      LIQUID_AMPMODEM_LSB,
+                                                      LIQUID_AMPMODEM_USB,
                                                       1);
         break;
     case DemodMode::Am:
@@ -144,7 +144,7 @@ bool ReceiveDemodulator::configure(const DemodulatorSettings& settings, std::str
     }
     next->signal_mixer = nco_crcf_create(LIQUID_NCO);
     if (next->signal_mixer && sideband) {
-        const float direction = settings.mode == DemodMode::Usb ? 1.0f : -1.0f;
+        const float direction = settings.mode == DemodMode::Usb ? -1.0f : 1.0f;
         next->signal_mixer_frequency = direction * static_cast<float>(M_PI) * cutoff;
         nco_crcf_set_frequency(next->signal_mixer, next->signal_mixer_frequency);
     }
