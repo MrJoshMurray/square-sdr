@@ -5,8 +5,8 @@
   "description": "Receive-only OpenHPSDR client for Square SDR 2 on Cardputer Zero.",
 
   "store": {
-    "summary": "Receive-only SDR control and spectrum display for Square SDR 2.",
-    "description": "Tune and monitor a Square SDR 2 over Ethernet from Cardputer Zero. The app provides live IQ reception, USB/LSB/AM/CW demodulation, a panadapter and waterfall, receive audio, approximate signal and PA telemetry, and discovery status. Transmit, PTT, MOX, and microphone capture are disabled.",
+    "summary": "A pocket-sized amateur-radio receiver for Square SDR 2.",
+    "description": "Put a real amateur-radio station in your pocket. Square SDR turns Cardputer Zero into a compact, receive-only control surface for the Square SDR 2 from Wide Servis, with live IQ reception, USB/LSB/AM/CW demodulation, a moving panadapter and waterfall, receive audio, and useful signal and PA telemetry. Hermes Lite 2 compatibility is possible but currently untested. Transmit, PTT, MOX, and microphone capture are intentionally disabled while the RX foundation is tested.",
     "locales": {
       "ja": {
         "summary": "Square SDR 2 用の受信専用 SDR 操作・スペクトラム表示アプリ。",
