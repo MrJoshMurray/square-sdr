@@ -118,7 +118,7 @@ void HelpPopup::build() {
     }
 
     footer_ = lv_label_create(panel_);
-    lv_label_set_text(footer_, "HELP / ESC  Close   PRSC  Screenshot");
+    lv_label_set_text(footer_, "H / ESC  Close   PRSC  Screenshot");
     lv_label_set_long_mode(footer_, LV_LABEL_LONG_CLIP);
     auto* footer_font = assets_.load_standard_font(10);
     lv_obj_set_style_text_font(footer_, footer_font ? footer_font : &lv_font_montserrat_10, 0);

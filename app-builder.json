@@ -26,8 +26,10 @@
     "screenshots": [
       "screenshot/square-sdr-receiver.png",
       "screenshot/square-sdr-settings.png",
+      "screenshot/square-sdr-help.png",
       "screenshot/square-sdr-receiver-light.png",
-      "screenshot/square-sdr-settings-light.png"
+      "screenshot/square-sdr-settings-light.png",
+      "screenshot/square-sdr-help-light.png"
     ],
     "icon": "assets/images/square-sdr.png",
     "license": "MIT",

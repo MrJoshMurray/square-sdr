@@ -7,7 +7,7 @@
 include(GNUInstallDirs)
 
 set(APP_DISPLAY_NAME "Square SDR" CACHE STRING "Human-readable application name used by launchers and package filename")
-set(APP_DEBIAN_REVISION "rev2" CACHE STRING "Debian package revision/vendor suffix")
+set(APP_DEBIAN_REVISION "" CACHE STRING "Optional Debian package revision suffix" FORCE)
 set(APP_DEBIAN_ARCHITECTURE "arm64" CACHE STRING "Debian package architecture")
 set(APP_MAINTAINER "Josh Murray <josh@tigerstyle.co.uk>" CACHE STRING "Debian package maintainer")
 set(APP_PACKAGE_DESCRIPTION "Square SDR application for Cardputer Zero" CACHE STRING "Debian package summary")
@@ -100,7 +100,7 @@ set(CPACK_PACKAGE_VENDOR "${APP_MAINTAINER}")
 set(CPACK_PACKAGE_CONTACT "${APP_MAINTAINER}")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "${APP_PACKAGE_DESCRIPTION}")
 set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
-set(CPACK_PACKAGE_FILE_NAME "${APP_DISPLAY_NAME}_${PROJECT_VERSION}_${APP_DEBIAN_REVISION}_${APP_DEBIAN_ARCHITECTURE}")
+set(CPACK_PACKAGE_FILE_NAME "${APP_DISPLAY_NAME}_${PROJECT_VERSION}_${APP_DEBIAN_ARCHITECTURE}")
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/assets/fonts/LICENSE.txt")
 
 string(TOLOWER "${APP_DISPLAY_NAME}" APP_DEBIAN_PACKAGE_NAME)
