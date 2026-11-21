@@ -6,7 +6,7 @@
 
   "store": {
     "summary": "A pocket-sized amateur-radio receiver for Square SDR 2.",
-    "description": "Put a real amateur-radio station in your pocket. Square SDR turns Cardputer Zero into a compact, receive-only control surface for the Square SDR 2 from Wide Servis, with live IQ reception, USB/LSB/AM/CW demodulation, a moving panadapter and waterfall, receive audio, and useful signal and PA telemetry. Hermes Lite 2 compatibility is possible but currently untested. Transmit, PTT, MOX, and microphone capture are intentionally disabled while the RX foundation is tested.",
+    "description": "Put a real amateur-radio station in your pocket. Square SDR turns Cardputer Zero into a compact, receive-only control surface for the Square SDR 2 from Wide Servis, with live IQ reception, USB/LSB/AM/CW demodulation, a moving panadapter and waterfall, receive audio, and useful signal and PA telemetry. Direct Ethernet to the radio is currently the only tested connection method; switched Ethernet, VLAN, and Wi-Fi operation are untested. Hermes Lite 2 compatibility is possible but currently untested. Transmit, PTT, MOX, and microphone capture are intentionally disabled while the RX foundation is tested.",
     "locales": {
       "ja": {
         "summary": "Square SDR 2 用の受信専用 SDR 操作・スペクトラム表示アプリ。",

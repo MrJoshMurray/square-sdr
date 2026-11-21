@@ -475,6 +475,10 @@ network. Device builds use live mode by default, including launcher, service,
 and shell launches. Desktop builds use the offline simulator unless started
 with `SQUARE_SDR_LIVE_RADIO=1`.
 
+Direct Ethernet between the Cardputer Zero and radio is currently the only
+tested connection method. Switched Ethernet, VLAN, and Wi-Fi operation are not
+yet validated.
+
 For a direct Mac-to-radio test, the known radio endpoint is commonly
 `169.254.19.221:1024`. The application also discovers Metis radios by sending
 Protocol 1 discovery packets across active IPv4 interfaces, so the address may
