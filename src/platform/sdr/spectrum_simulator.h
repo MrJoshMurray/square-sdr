@@ -14,7 +14,7 @@
 
 namespace platform::sdr {
 
-constexpr size_t kSpectrumBinCount = 96;
+constexpr size_t kSpectrumBinCount = 288;
 
 using SpectrumFrame = std::array<uint8_t, kSpectrumBinCount>;
 
@@ -23,7 +23,8 @@ SpectrumFrame make_simulated_spectrum(uint32_t frame_index) noexcept;
 class LiveSpectrumBuffer {
 public:
 	static void push_iq(const IqSample* samples, size_t sample_count) noexcept;
-	static bool snapshot(SpectrumFrame& frame) noexcept;
+	static bool snapshot(SpectrumFrame& frame, SpectrumFrame* waterfall = nullptr,
+	                     uint64_t* sequence = nullptr) noexcept;
 	// While blanked, snapshots return an empty spectrum and drop the smoothing history.
 	static void set_blanked(bool blanked) noexcept;
 };

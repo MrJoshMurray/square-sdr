@@ -210,6 +210,8 @@ void test_live_spectrum_tones() {
     assert(!platform::sdr::LiveSpectrumBuffer::snapshot(frame));
 
     for (const int direction : {1, -1}) {
+        platform::sdr::LiveSpectrumBuffer::set_blanked(true);
+        platform::sdr::LiveSpectrumBuffer::set_blanked(false);
         for (size_t sample = 0; sample < iq.size(); ++sample) {
             const float phase = 2.0f * kPi * direction * 0.25f * sample;
             iq[sample] = {quantize(0.000012f * std::cos(phase)),
@@ -220,8 +222,38 @@ void test_live_spectrum_tones() {
             assert(platform::sdr::LiveSpectrumBuffer::snapshot(frame));
         }
         const auto peak = std::max_element(frame.begin(), frame.end()) - frame.begin();
-        assert(peak == (direction > 0 ? 72 : 24));
+        assert(peak == static_cast<ptrdiff_t>(frame.size() * (direction > 0 ? 3 : 1) / 4));
         assert(frame[peak] > 0);
+
+        platform::sdr::SpectrumFrame waterfall{};
+        uint64_t sequence = 0;
+        assert(platform::sdr::LiveSpectrumBuffer::snapshot(frame, &waterfall, &sequence));
+        const auto previous_frame = frame;
+        uint64_t unchanged_sequence = 0;
+        assert(platform::sdr::LiveSpectrumBuffer::snapshot(frame, &waterfall, &unchanged_sequence));
+        assert(sequence == unchanged_sequence && frame == previous_frame);
+
+        std::vector<platform::sdr::IqSample> silence(2400);
+        platform::sdr::LiveSpectrumBuffer::push_iq(silence.data(), silence.size() - 1);
+        assert(platform::sdr::LiveSpectrumBuffer::snapshot(frame, &waterfall, &unchanged_sequence));
+        assert(sequence == unchanged_sequence && frame == previous_frame);
+        platform::sdr::LiveSpectrumBuffer::push_iq(silence.data(), 1);
+        assert(platform::sdr::LiveSpectrumBuffer::snapshot(frame, &waterfall, &unchanged_sequence));
+        assert(unchanged_sequence == sequence + 1);
+        assert(waterfall[peak] == 0);
+        assert(frame[peak] > waterfall[peak]);
+
+        platform::sdr::LiveSpectrumBuffer::set_blanked(true);
+        assert(platform::sdr::LiveSpectrumBuffer::snapshot(frame, &waterfall));
+        assert(std::all_of(frame.begin(), frame.end(), [](uint8_t value) { return value == 0; }));
+        assert(frame == waterfall);
+        platform::sdr::LiveSpectrumBuffer::push_iq(iq.data(), iq.size());
+        platform::sdr::LiveSpectrumBuffer::set_blanked(false);
+        assert(!platform::sdr::LiveSpectrumBuffer::snapshot(frame));
+        platform::sdr::LiveSpectrumBuffer::push_iq(iq.data(), iq.size() - 1);
+        assert(!platform::sdr::LiveSpectrumBuffer::snapshot(frame));
+        platform::sdr::LiveSpectrumBuffer::push_iq(iq.data() + iq.size() - 1, 1);
+        assert(platform::sdr::LiveSpectrumBuffer::snapshot(frame));
     }
 }
 

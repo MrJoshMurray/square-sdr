@@ -213,7 +213,7 @@ void ReceiverScreen::build_content(lv_obj_t* content) {
                  94,
                  LV_TEXT_ALIGN_RIGHT);
 
-    spectrum_timer_ = lv_timer_create(spectrum_timer_cb, 120, this);
+    spectrum_timer_ = lv_timer_create(spectrum_timer_cb, 50, this);
     update_spectrum();
 }
 
@@ -226,15 +226,25 @@ void ReceiverScreen::spectrum_timer_cb(lv_timer_t* timer) {
 
 void ReceiverScreen::update_spectrum() {
     platform::sdr::SpectrumFrame frame{};
-    if (!platform::sdr::LiveSpectrumBuffer::snapshot(frame)) {
+    platform::sdr::SpectrumFrame waterfall{};
+    uint64_t sequence = 0;
+    bool scroll = false;
+    if (platform::sdr::LiveSpectrumBuffer::snapshot(frame, &waterfall, &sequence)) {
+        scroll = sequence != spectrum_sequence_;
+        spectrum_sequence_ = sequence;
+    } else {
         if (!std::getenv("SQUARE_SDR_LIVE_RADIO")) {
             frame = platform::sdr::make_simulated_spectrum(frame_index_++);
+            waterfall = frame;
+            scroll = true;
         }
     }
     std::fill(spectrum_pixels_.begin(), spectrum_pixels_.end(), kBackground);
-    std::memmove(waterfall_pixels_.data() + kCanvasWidth,
-                 waterfall_pixels_.data(),
-                 (waterfall_pixels_.size() - kCanvasWidth) * sizeof(uint16_t));
+    if (scroll) {
+        std::memmove(waterfall_pixels_.data() + kCanvasWidth,
+                     waterfall_pixels_.data(),
+                     (waterfall_pixels_.size() - kCanvasWidth) * sizeof(uint16_t));
+    }
 
     constexpr int32_t kCenterX = kCanvasWidth / 2 - 1;
     const auto bandwidth_pixels = std::max<int32_t>(
@@ -281,11 +291,11 @@ void ReceiverScreen::update_spectrum() {
             spectrum_pixels_[y * kCanvasWidth + x] = heat_color(level);
         }
         previous_y = trace_y;
-        waterfall_pixels_[x] = heat_color(level);
+        if (scroll) waterfall_pixels_[x] = heat_color(waterfall[bin]);
     }
 
     lv_obj_invalidate(spectrum_canvas_);
-    lv_obj_invalidate(waterfall_canvas_);
+    if (scroll) lv_obj_invalidate(waterfall_canvas_);
 }
 
 } // namespace screen

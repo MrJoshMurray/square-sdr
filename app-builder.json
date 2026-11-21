@@ -1,7 +1,7 @@
 {
   "app_name": "Square SDR",
   "package_name": "square-sdr",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "OpenHPSDR client with voice and CW transmit for Square SDR 2 on Cardputer Zero.",
   "store": {
     "summary": "Tune, listen and transmit with a Square SDR 2 or Hermes-Lite 2 radio.",

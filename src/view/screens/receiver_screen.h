@@ -33,6 +33,7 @@ private:
     std::array<uint16_t, kCanvasWidth * kSpectrumHeight> spectrum_pixels_{};
     std::array<uint16_t, kCanvasWidth * kWaterfallHeight> waterfall_pixels_{};
     uint32_t frame_index_{0};
+    uint64_t spectrum_sequence_{0};
 };
 
 } // namespace screen

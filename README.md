@@ -23,6 +23,8 @@ In Settings: `F` / `X` (or ↑/↓) pick a row, `Z` / `C` (or ←/→) change th
 
 The top bar shows an LED-style **S meter** while receiving and a **mic level** bar while transmitting (it goes red if you're clipping). The status area shows `CLIP` for ADC overload, `R+150` when RIT is active and `NOTCH` when the notch is on.
 
+The waterfall updates from fresh radio frames at up to 20 rows per second, with finer detail and no trace smoothing applied to its history. The spectrum trace is smoothed separately. The 48 kHz span and transmit blanking are unchanged.
+
 RIT shifts only what you hear. Transmit always stays on the dial frequency.
 
 ### Settings
